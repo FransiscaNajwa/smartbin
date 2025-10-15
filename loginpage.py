@@ -3,7 +3,7 @@ import pymongo
 import bcrypt
 
 # Koneksi MongoDB (ganti dengan connection string Anda)
-client = pymongo.MongoClient("mongodb+srv://user:pass@cluster.mongodb.net/smartbin_db")
+client = pymongo.MongoClient("mongodb+srv://smartbinuser:<SmartBin123>@cluster0.inq2nbd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.smartbin_db
 users = db.users
 
