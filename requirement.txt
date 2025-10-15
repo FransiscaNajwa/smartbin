@@ -1,0 +1,7 @@
+streamlit
+pymongo
+bcrypt
+paho-mqtt
+altair
+pandas
+streamlit-extras
