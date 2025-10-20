@@ -1,172 +1,223 @@
 import streamlit as st
-import paho.mqtt.client as mqtt
-import json
-import threading
 import pymongo
-from datetime import datetime
-import altair as alt
+import json
+import altair as alt 
 import pandas as pd
+from datetime import datetime, timedelta
+import time
+import numpy as np 
 
-# Koneksi MongoDB (ganti dengan connection string Anda)
-client = pymongo.MongoClient("mongodb+srv://user:pass@cluster.mongodb.net/smartbin_db")
-db = client.smartbin_db
-sensors = db.sensors
-
-# MQTT Konfigurasi (HiveMQ)
-HIVEMQ_BROKER = "your-hivemq-broker.com"
-HIVEMQ_PORT = 1883
-HIVEMQ_USER = "user"
-HIVEMQ_PASS = "pass"
-MQTT_TOPIC = "smartbin/sensor/#"
-
-# State untuk data real-time
+# --- KONEKSI MONGODB & MQTT (DINONAKTIFKAN UNTUK UI) ---
+# Mock data state
 if "sensor_data" not in st.session_state:
-    st.session_state.sensor_data = {"kapasitas": 0, "suhu": 0, "kelembapan": 0}
+    st.session_state.sensor_data = {"kapasitas": 68, "suhu": 32, "kelembapan": 75, "status": "Aman"}
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = True 
 
-def on_message(client, userdata, msg):
-    payload = json.loads(msg.payload.decode())
-    topic_parts = msg.topic.split("/")
-    if len(topic_parts) > 2:
-        sensor_type = topic_parts[2]
-        st.session_state.sensor_data[sensor_type] = payload["value"]
-        # Simpan ke MongoDB
-        sensors.insert_one({"type": sensor_type, "value": payload["value"], "timestamp": datetime.now()})
+# Fungsi navigasi sederhana
+def navigate_to(page_name):
+    st.session_state.page = page_name
     st.experimental_rerun()
+    
+# Fungsi get color berdasarkan status
+def get_status_color(status):
+    if status == "Aman" or status == "Normal":
+        return "#FF8C00" 
+    elif status == "Hampir Penuh" or status == "Tinggi":
+        return "#FFD700" 
+    elif status == "Penuh" or status == "Bahaya":
+        return "#FF4500" 
+    return "#FF8C00"
 
-def start_mqtt():
-    mqttc = mqtt.Client()
-    mqttc.username_pw_set(HIVEMQ_USER, HIVEMQ_PASS)
-    mqttc.connect(HIVEMQ_BROKER, HIVEMQ_PORT, 60)
-    mqttc.on_message = on_message
-    mqttc.subscribe(MQTT_TOPIC)
-    mqttc.loop_start()
+# --- CONFIG & STYLING SESUAI DESAIN ---
+st.set_page_config(page_title="SmartBin Monitoring", page_icon="🗑️", layout="wide")
 
-# Jalankan MQTT di thread
-thread = threading.Thread(target=start_mqtt)
-thread.start()
+st.markdown("""
+    <style>
+    /* 1. Latar Belakang: Ungu Muda Solid */
+    .stApp {
+        background-color: #C3B0E1; 
+        background: #C3B0E1; 
+        color: black;
+        font-family: 'Arial', sans-serif;
+    }
+    
+    /* 2. Styling Tombol Header */
+    .stButton button {
+        background-color: black;
+        color: white;
+        border-radius: 5px;
+        padding: 8px 15px;
+        width: auto;
+        white-space: nowrap;
+    }
+    
+    /* 3. PENTING: MENAMBAH MARGIN KIRI PADA SMARTBIN */
+    .header-text {
+        font-weight: bold; 
+        font-size: 1.2em;
+        margin-top: 0;
+        margin-bottom: 0;
+        /* Tambahkan margin kiri untuk mensejajarkan dengan konten di kolom tengah */
+        padding-left: 10px; 
+    }
+    
+    /* 4. Styling Kotak Nilai Suhu/Kelembaban/Status */
+    .value-box {
+        display: inline-block;
+        border-radius: 10px;
+        padding: 10px 15px;
+        font-size: 2.5em; 
+        font-weight: bold;
+        text-align: center;
+        margin-right: 20px;
+        color: black; 
+    }
+    
+    /* 5. Icon/Title Alignment */
+    .card-title {
+        font-size: 1.2em;
+        font-weight: bold;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+    }
+    
+    /* 6. Footer Styling dan Separator */
+    .footer-text {
+        margin-top: 40px;
+        font-style: italic;
+        color: black;
+    }
+    .section-separator {
+        margin: 25px 0; 
+    }
+    
+    /* PENTING: Penyesuaian untuk alignment visual di kolom tengah */
+    div[data-testid^="stHorizontalBlock"] > div > div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    div[data-testid^="stHorizontalBlock"] .card-title {
+        align-self: flex-start; 
+        text-align: left;
+    }
+    
+    </style>
+""", unsafe_allow_html=True)
+
 
 def show():
-    # Judul dan navigasi
-    st.title("Monitoring Page")
-    st.button("Home", on_click=lambda: st.session_state.page("Homepage"))
+    # --- HEADER (SmartBin Kiri, Home Kanan) ---
+    # Mempertahankan st.columns([1, 0.15])
+    header_col1, header_col2 = st.columns([1, 0.15]) 
+    
+    with header_col1:
+        # PENTING: Menambahkan div wrapper untuk menyelaraskan dengan kolom tengah
+        st.markdown('<div style="display: flex; justify-content: flex-start;">'
+                    '<div class="header-text">SmartBin</div>'
+                    '</div>', unsafe_allow_html=True)
 
-    # Warna latar belakang menyerupai gambar
-    st.markdown(
-        """
-        <style>
-        .stApp {
-            background: linear-gradient(to right, #C3B1E1, #B0C4DE);
-        }
-        .temp-box {
-            background-color: #f4a261;
-            padding: 10px;
-            border-radius: 10px;
-            text-align: center;
-            color: black;
-            font-size: 24px;
-            margin: 5px;
-        }
-        .temp-text {
-            font-size: 14px;
-            color: black;
-        }
-        .status-box {
-            background-color: #f4a261;
-            padding: 10px;
-            border-radius: 10px;
-            text-align: center;
-            color: black;
-            font-size: 24px;
-            margin: 5px;
-        }
-        .status-text {
-            font-size: 14px;
-            color: black;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    with header_col2:
+        if st.button("Home", key="home_button"): 
+            navigate_to("Homepage")
 
-    # Bagian Kapasitas Tempat Sampah
+    # Ambil data dari session state
+    latest_data = st.session_state.sensor_data
+    
+    # Rasio kolom untuk konten tengah
+    CONTENT_COLS = [1.5, 3, 1.5]
+
+    # ==========================================================
+    # --- 1. KAPASITAS TEMPAT SAMPAH ---
+    # ==========================================================
+    st.markdown('<div class="section-separator">', unsafe_allow_html=True)
     with st.container():
-        st.markdown("<h3 style='text-align: center;'>Kapasitas Tempat Sampah (%)</h3>", unsafe_allow_html=True)
-        kapasitas = st.session_state.sensor_data["kapasitas"]
-        progress = st.progress(0)
-        for i in range(int(kapasitas)):
-            time.sleep(0.01)
-            progress.progress((i + 1) / 100)
-        st.write(f"**Terisi {kapasitas}%**")
-        st.button("Reset Status", on_click=lambda: st.session_state.sensor_data.update({"kapasitas": 0}))
+        
+        capacity_value = latest_data['kapasitas']
+        capacity_color = "#F8BBD0" 
+        
+        col_left, col_center, col_right = st.columns(CONTENT_COLS)
 
-    # Kapasitas dengan Pie Chart
-    st.subheader("Kapasitas Sampah (Pie Chart)")
-    df = pd.DataFrame({
-        "Kategori": ["Terisi", "Kosong"],
-        "Nilai": [kapasitas, 100 - kapasitas]
-    })
-    pie_chart = alt.Chart(df).mark_arc().encode(
-        theta="Nilai",
-        color="Kategori"
-    )
-    st.altair_chart(pie_chart, use_container_width=True)
+        with col_center:
+            # Judul Kapasitas
+            st.markdown('<div class="card-title">🗑️ Kapasitas Tempat Sampah (%)</div>', unsafe_allow_html=True)
 
-    # Bagian Suhu
+            # Nilai Kapasitas
+            st.markdown(f'<div class="value-box" style="background-color: {capacity_color};">{capacity_value}%</div>', unsafe_allow_html=True)
+            
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # ==========================================================
+    # --- 2. SUHU (°C) ---
+    # ==========================================================
+    st.markdown('<div class="section-separator">', unsafe_allow_html=True)
     with st.container():
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.write("🌡️ Suhu (°C)")
-        with col2:
-            suhu = st.session_state.sensor_data["suhu"]
-            st.markdown(
-                f"""
-                <div class="temp-box">{suhu}°C</div>
-                <div class="temp-text">Tiga puluh dua derajat</div>
-                """,
-                unsafe_allow_html=True
-            )
-        st.button("Alert", on_click=lambda: st.warning(f"Suhu {suhu}°C di atas batas normal!"))
+        
+        suhu_val = latest_data['suhu']
+        suhu_color = "#F8BBD0" 
+        
+        col_left, col_center, col_right = st.columns(CONTENT_COLS)
+        
+        with col_center:
+            st.markdown('<div class="card-title">🌡️ Suhu (°C)</div>', unsafe_allow_html=True)
 
-    # Bagian Kelembapan
+            # Nilai Suhu
+            st.markdown(f'<div class="value-box" style="background-color: {suhu_color};">{suhu_val}°C</div>', unsafe_allow_html=True)
+            
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ==========================================================
+    # --- 3. KELEMBAPAN (%) ---
+    # ==========================================================
+    st.markdown('<div class="section-separator">', unsafe_allow_html=True)
     with st.container():
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.write("💧 Kelembapan (%)")
-        with col2:
-            kelembapan = st.session_state.sensor_data["kelembapan"]
-            st.markdown(
-                f"""
-                <div class="temp-box">{kelembapan}%</div>
-                <div class="temp-text">Tiga puluh dua derajat</div>
-                """,
-                unsafe_allow_html=True
-            )
-        st.button("Alert", on_click=lambda: st.warning(f"Kelembapan {kelembapan}% di atas batas normal!"))
+        
+        kelembapan_val = latest_data['kelembapan']
+        kelembapan_color = "#FFD700" 
+        
+        col_left, col_center, col_right = st.columns(CONTENT_COLS)
 
-    # Bagian Status Umum
+        with col_center:
+            st.markdown('<div class="card-title">💧 Kelembapan (%)</div>', unsafe_allow_html=True)
+
+            # Nilai Kelembapan
+            st.markdown(f'<div class="value-box" style="background-color: {kelembapan_color};">{kelembapan_val}%</div>', unsafe_allow_html=True)
+            
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ==========================================================
+    # --- 4. STATUS UMUM ---
+    # ==========================================================
+    st.markdown('<div class="section-separator">', unsafe_allow_html=True)
     with st.container():
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.write("⚠️ Status Umum (Aman / Hampir Penuh / Penuh)")
-        with col2:
-            status = "Aman" if kapasitas < 70 else "Hampir Penuh" if kapasitas < 90 else "Penuh"
-            st.markdown(
-                f"""
-                <div class="status-box">{status}</div>
-                <div class="status-text">Tempat sampah dalam keadaan {status.lower()}</div>
-                """,
-                unsafe_allow_html=True
-            )
+        
+        status_umum = latest_data['status']
+        status_color = get_status_color(status_umum)
+        
+        col_left, col_center, col_right = st.columns(CONTENT_COLS)
 
-    # Footer
-    st.markdown(
-        """
-        <div style='text-align: center; margin-top: 60px; font-style: italic; color: black;'>
-        D4 Teknik Komputer A @SmartBin
+        with col_center:
+            st.markdown('<div class="card-title">⚠️ Status Umum (Aman / Hampir Penuh / Penuh)</div>', unsafe_allow_html=True)
+
+            # Nilai Status
+            st.markdown(f'<div class="value-box" style="background-color: {status_color}; color: white;">{status_umum}</div>', unsafe_allow_html=True)
+            
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+    # --- FOOTER ---
+    st.markdown("""
+        <div class="footer-text">
+        3 D4 Teknik Komputer A
+        <br>
+        @SmartBin
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     show()

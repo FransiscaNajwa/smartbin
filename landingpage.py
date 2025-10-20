@@ -1,364 +1,305 @@
 import streamlit as st
 import pymongo
-import paho.mqtt.client as mqtt
+# import paho.mqtt.client as mqtt
 import json
-import threading
+# import threading
 import bcrypt
 from datetime import datetime
 
-# Koneksi MongoDB (ganti dengan connection string Anda)
-client = pymongo.MongoClient("mongodb+srv://smartbinuser:<SmartBin123>@cluster0.inq2nbd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
-db = client.smartbin_db
-users = db.users
-sensors = db.sensors
+# Koneksi MongoDB (DINONAKTIFKAN)
+# client = pymongo.MongoClient("mongodb+srv://smartbinuser:<SmartBin123>@cluster0.inq2nbd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+# db = client.smartbin_db
+# users = db.users
+# sensors = db.sensors
 
-# MQTT Konfigurasi (HiveMQ)
-HIVEMQ_BROKER = "your-hivemq-broker.com"
-HIVEMQ_PORT = 1883
-HIVEMQ_USER = "user"
-HIVEMQ_PASS = "pass"
-MQTT_TOPIC = "smartbin/sensor/#"
-
-# State untuk data real-time dan login
+# State untuk data (Mock Data)
 if "sensor_data" not in st.session_state:
-    st.session_state.sensor_data = {"kapasitas": 0, "suhu": 0, "kelembapan": 0}
+    st.session_state.sensor_data = {"kapasitas": 68, "suhu": 32, "kelembapan": 32}
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = None
-if "show_login" not in st.session_state:
-    st.session_state.show_login = False
-if "show_register" not in st.session_state:
-    st.session_state.show_register = False
+if "page" not in st.session_state:
+    st.session_state.page = "LandingPage"
 
-# MQTT Callback
-def on_message(client, userdata, msg):
-    payload = json.loads(msg.payload.decode())
-    topic_parts = msg.topic.split("/")
-    if len(topic_parts) > 2:
-        sensor_type = topic_parts[2]
-        st.session_state.sensor_data[sensor_type] = payload["value"]
-        sensors.insert_one({"type": sensor_type, "value": payload["value"], "timestamp": datetime.now()})
+# Fungsi navigasi (mengganti page state)
+def navigate_to(page_name):
+    st.session_state.page = page_name
     st.experimental_rerun()
 
-def start_mqtt():
-    mqttc = mqtt.Client()
-    mqttc.username_pw_set(HIVEMQ_USER, HIVEMQ_PASS)
-    mqttc.connect(HIVEMQ_BROKER, HIVEMQ_PORT, 60)
-    mqttc.on_message = on_message
-    mqttc.subscribe(MQTT_TOPIC)
-    mqttc.loop_start()
+# Fungsi get color berdasarkan status (digunakan di mockup)
+def get_status_color(status):
+    if status == "Aman":
+        return "#FF8C00" 
+    return "#FF8C00"
 
-# Jalankan MQTT di thread
-thread = threading.Thread(target=start_mqtt)
-thread.start()
-
-# Konfigurasi halaman utama
+# --- CONFIG & STYLING SESUAI DESAIN ---
 st.set_page_config(page_title="SmartBin", page_icon="🗑️", layout="wide")
 
-# CSS Kustom untuk desain mockup
 st.markdown("""
     <style>
+    /* 1. Latar Belakang: Ungu Muda Solid */
     .stApp {
-        background: linear-gradient(to bottom, #C3B1E1, #B0C4DE);
-        font-family: 'Helvetica Neue', sans-serif;
-        color: #2c3e50;
+        background-color: #C3B0E1; 
+        background: #C3B0E1; 
+        color: black;
+        font-family: 'Arial', sans-serif;
     }
-    .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 40px;
-        background-color: #6B48FF;
-        border-bottom: 2px solid #4A2DFF;
+    
+    /* 2. Styling Tombol Header (Login/Register) */
+    .stButton button {
+        background-color: black;
+        color: white;
+        border-radius: 5px;
+        padding: 8px 15px;
+        width: auto;
+        white-space: nowrap;
+        font-weight: bold;
+        margin-left: 10px;
     }
-    .header h2 {
-        color: #FFFFFF;
-        font-weight: 700;
-        font-size: 24px;
-        margin: 0;
+    .header-text {
+        font-weight: bold; 
+        font-size: 1.2em;
     }
-    .nav a {
-        margin-left: 20px;
-        text-decoration: none;
-        color: #FFFFFF;
-        font-weight: 500;
+
+    /* 3. Hero Section Text */
+    .welcome-title {
+        font-size: 3em;
+        font-weight: bold;
+        margin-bottom: 0;
     }
-    .btn {
-        background-color: #6B48FF;
-        color: #FFFFFF;
-        border: none;
-        border-radius: 6px;
-        padding: 6px 14px;
-        text-decoration: none;
-        font-weight: 600;
-        transition: background-color 0.3s ease;
+    .slogan-text {
+        font-size: 1.2em;
+        margin-top: 5px;
+        margin-bottom: 30px;
     }
-    .btn:hover {
-        background-color: #4A2DFF;
-    }
-    .hero {
-        text-align: center;
-        padding: 40px;
-        background-color: #FFFFFF;
-        border-radius: 15px;
-        margin: 20px auto;
-        max-width: 800px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-    .hero h1 {
-        font-size: 36px;
-        font-weight: 800;
-        color: #2c3e50;
-    }
-    .hero p {
-        font-size: 18px;
-        color: #7f8c8d;
-        margin-top: 10px;
-    }
-    .feature-section {
-        display: flex;
-        justify-content: space-around;
-        margin: 30px 0;
-    }
-    .feature-card {
-        background-color: #FFFFFF;
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
-        width: 28%;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        cursor: pointer;
-        transition: transform 0.3s ease;
-    }
-    .feature-card:hover {
-        transform: scale(1.05);
-    }
-    .feature-card h3 {
-        font-size: 18px;
-        font-weight: 700;
-        color: #2c3e50;
-    }
-    .feature-card p {
-        font-size: 14px;
-        color: #7f8c8d;
-    }
-    .chart-section {
-        text-align: center;
-        margin: 30px 0;
-    }
-    .chart-section h3 {
-        font-size: 24px;
-        font-weight: 700;
-        color: #2c3e50;
-    }
-    .how-section {
-        background-color: #FFFFFF;
-        border-radius: 15px;
-        padding: 20px;
-        margin: 20px auto;
-        max-width: 800px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-    .how-section h3 {
-        font-size: 22px;
-        font-weight: 700;
-        color: #2c3e50;
-        font-style: italic;
-    }
-    .how-section b {
-        font-size: 16px;
-        color: #2c3e50;
-    }
-    .how-section p {
-        font-size: 14px;
-        color: #7f8c8d;
-    }
-    .action-buttons {
-        text-align: center;
-        margin: 20px 0;
-    }
-    .footer {
-        text-align: center;
+
+    /* 4. Monitoring Mockup Styles */
+    .mockup-title {
+        font-size: 1.5em;
+        font-weight: bold;
         margin-top: 40px;
-        padding: 15px;
-        background-color: #6B48FF;
-        color: #FFFFFF;
-        border-top: 2px solid #4A2DFF;
-        font-size: 14px;
+        margin-bottom: 10px;
+        text-align: left;
     }
-    .login-form, .register-form {
-        background-color: #FFFFFF;
+    .value-box-mock {
+        display: inline-block;
         border-radius: 10px;
-        padding: 20px;
-        margin: 20px auto;
-        max-width: 400px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        display: none;
+        padding: 8px 12px;
+        font-size: 2.0em; 
+        font-weight: bold;
+        text-align: center;
+        color: black; 
+        margin-right: 15px;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+        width: 100px;
+        height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    .login-form.active, .register-form.active {
+    .icon-title-mock {
+        font-size: 1em;
+        font-weight: bold;
         display: block;
+        align-items: center;
+        margin-bottom: 5px;
+        margin-top: 15px;
+        min-height: 40px;
     }
+
+    /* 5. Riwayat Mockup Table Style (DIPERBAIKI UNTUK TEXT-ALIGN: CENTER) */
+    .mock-table-container {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        margin-top: 10px;
+        margin-bottom: 20px;
+        overflow: hidden; 
+    }
+    
+    .table-data-wrapper { max-height: 250px; overflow-y: scroll; }
+    .table-row { display: flex; width: 100%; }
+
+    /* Styling Header Kolom */
+    .table-header-cell {
+        background-color: #f0f0f0; 
+        font-weight: bold;
+        padding: 10px;
+        border-right: 1px solid #ccc;
+        width: 50%;
+        text-align: center; /* Header dibuat rata tengah */
+    }
+    
+    /* Styling Data Kolom */
+    .table-data-cell {
+        padding: 8px 10px;
+        border-bottom: 1px solid #eee;
+        border-right: 1px solid #eee;
+        width: 50%;
+        text-align: center; /* Data dibuat RATA TENGAH */
+    }
+    .table-data-cell:last-child {
+        border-right: none;
+    }
+    .table-header-cell:last-child {
+        border-right: none;
+    }
+    .table-title-header {
+         font-size: 1.2em;
+         font-weight: bold;
+         margin-bottom: 5px;
+         margin-top: 15px;
+         display: flex;
+         align-items: center;
+    }
+    .table-icon {
+        margin-right: 5px;
+        vertical-align: middle;
+    }
+
+    /* 6. Footer Styling */
+    .how-it-works-list { list-style-type: none; padding-left: 0; font-style: italic; font-size: 1.1em; }
+    .how-it-works-list li { margin-bottom: 10px; }
+    .how-it-works-list b { font-size: 1.1em; font-weight: bold; }
+    .footer-text { margin-top: 50px; font-style: italic; color: black; }
     </style>
 """, unsafe_allow_html=True)
 
-# Header
-st.markdown(f"""
-<div class="header">
-    <h2>SmartBin - {datetime.now().strftime('%d/%m/%Y %H:%M WIB')}</h2>
-    <div class="nav">
-        <a class="btn" href="#" onClick='show_login_form()'>Login</a>
-        <a class="btn" href="#" onClick='show_register_form()'>Register</a>
+# Fungsi untuk render tabel dengan pemusatan
+def render_centered_table(title_markdown, data_rows, header_cells):
+    # Menggunakan rasio kolom [1, 4, 1] untuk pemusatan
+    col_left, col_center, col_right = st.columns([1, 4, 1])
+
+    with col_center:
+        st.markdown(title_markdown, unsafe_allow_html=True)
+        st.markdown('<div class="mock-table-container">', unsafe_allow_html=True)
+        
+        # Header Row
+        st.markdown(f'<div class="table-row table-header-row">{header_cells}</div>', unsafe_allow_html=True)
+        
+        # Data Wrapper (SCROLLABLE AREA)
+        st.markdown('<div class="table-data-wrapper">', unsafe_allow_html=True)
+        for time_val, val2 in data_rows:
+            # Karena CSS sekarang mengatur semua data ke tengah, kita hanya perlu mencetak valuenya
+            st.markdown(f'<div class="table-row">'
+                        f'<div class="table-data-cell">{time_val}</div>'
+                        f'<div class="table-data-cell">{val2}</div>'
+                        f'</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True) # Penutup table-data-wrapper
+        
+        st.markdown('</div>', unsafe_allow_html=True) # Penutup mock-table-container
+
+
+def show_landing_page(): 
+    
+    # Data Dummy
+    mock_data_kapasitas = [
+        ("11:08:11", "54%"), ("13:08:11", "69%"), ("15:08:11", "45%"), 
+        ("17:08:11", "23%"), ("19:08:11", "96%"), ("21:08:11", "78%"), 
+        ("23:08:11", "44%"), ("01:08:11", "23%"), ("03:08:11", "88%"), 
+        ("05:08:11", "12%"), ("07:08:11", "65%") 
+    ]
+    mock_data_suhu = [
+        ("34.3°C", "52%"), ("34.8°C", "67%"), ("31.4°C", "57%"), 
+        ("32.0°C", "60%"), ("33.5°C", "70%")
+    ]
+    
+    # --- 1. HEADER (SmartBin Kiri, Login/Register Kanan) ---
+    header_col1, header_col2 = st.columns([1, 0.25]) 
+    
+    with header_col1:
+        st.markdown('<div class="header-text">SmartBin</div>', unsafe_allow_html=True)
+
+    with header_col2:
+        nav_col1, nav_col2 = st.columns([1, 1])
+        
+        with nav_col1:
+            if st.button("Register", key="nav_register"): navigate_to("Register")
+        with nav_col2:
+            if st.button("Login", key="nav_login"): navigate_to("Login")
+
+    # --- HERO SECTION (Judul dan Slogan) ---
+    st.markdown('<h1 class="welcome-title">Welcome to SmartBin</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="slogan-text">Track, Monitor, and Stay Clean......</p>', unsafe_allow_html=True)
+
+    # --- GAMBAR UTAMA (Ukuran DIPERBESAR dan Terpusat) ---
+    col_img_left, col_img_center, col_img_right = st.columns([0.5, 5, 0.5])
+    with col_img_center:
+        st.image(
+            "sampah.png", 
+            use_container_width=True,
+            caption="" 
+        )
+
+    # ==========================================================
+    # --- MOCKUP MONITORING PAGE ---
+    # ==========================================================
+    st.markdown('<div class="mockup-title" style="margin-top: 40px;">Monitoring Page</div>', unsafe_allow_html=True)
+    
+    # Render nilai-nilai monitoring yang sudah di-center
+    col_left, col_center_mon, col_right = st.columns([1, 4, 1])
+    
+    with col_center_mon:
+        # Menggunakan kolom di dalam kolom tengah untuk tata letak nilai
+        col_mon1, col_mon2, col_mon3 = st.columns(3)
+        
+        kap_val = st.session_state.sensor_data["kapasitas"]
+        suhu_val = st.session_state.sensor_data["suhu"]
+        kelem_val = st.session_state.sensor_data["kelembapan"]
+        
+        with col_mon1:
+            st.markdown('<div class="icon-title-mock">🗑️ Kapasitas Tempat Sampah (%)</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="value-box-mock" style="background-color: #FFB6C1; color: black; padding: 15px;">{kap_val}%</div>', unsafe_allow_html=True)
+            
+        with col_mon2:
+            st.markdown('<div class="icon-title-mock">🌡️ Suhu (°C)</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="value-box-mock" style="background-color: #FF8C00; color: white;">{suhu_val}°C</div>', unsafe_allow_html=True) 
+            
+        with col_mon3:
+            st.markdown('<div class="icon-title-mock">💧 Kelembapan (%)</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="value-box-mock" style="background-color: #FFD700; color: black; padding: 15px;">{kelem_val}%</div>', unsafe_allow_html=True) 
+
+    # ==========================================================
+    # --- MOCKUP RIWAYAT PAGE (TABEL DIPUSATKAN) ---
+    # ==========================================================
+    st.markdown('<div class="mockup-title" style="margin-top: 50px;">Riwayat Page</div>', unsafe_allow_html=True)
+
+    # --- TABEL 1: Waktu & Kapasitas (DIPUSATKAN) ---
+    render_centered_table(
+        title_markdown='<div class="table-title-header"><span class="table-icon">⏰</span> Waktu <span class="table-icon">🗑️</span> Kapasitas (%)</div>',
+        data_rows=mock_data_kapasitas,
+        header_cells='<div class="table-header-cell">⏰ Waktu</div><div class="table-header-cell">🗑️ Kapasitas (%)</div>'
+    )
+
+    # --- TABEL 2: Suhu & Kelembapan (DIPUSATKAN) ---
+    render_centered_table(
+        title_markdown='<div class="table-title-header" style="margin-top: 25px;"><span class="table-icon">🌡️</span> Suhu (°C) <span class="table-icon">💧</span> Kelembapan (%)</div>',
+        data_rows=mock_data_suhu,
+        header_cells='<div class="table-header-cell">🌡️ Suhu (°C)</div><div class="table-header-cell">💧 Kelembapan (%)</div>'
+    )
+        
+    
+    # --- SECTION HOW IT WORKS ---
+    st.markdown("<h2 style='margin-top: 50px;'>How it works?</h2>", unsafe_allow_html=True)
+    st.markdown("""
+        <ul class="how-it-works-list">
+            <li><b>1. Hubungkan Perangkat IoT</b><br>Sambungkan sensor dengan WiFi dan sistem SmartBin</li>
+            <li><b>2. Pantau dari Website</b><br>Login dan pantau status tempat sampah secara real-time</li>
+            <li><b>3. Dapatkan Notifikasi</b><br>Terima peringatan ketika tempat sampah penuh dan suhu dari dalam tempat sampah</li>
+        </ul>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<p>Bersama kita wujudkan kebersihan berkelanjutan<br>Mulai langkah kecil untuk bumi yang lebih hijau</p>", unsafe_allow_html=True)
+
+    # --- FOOTER ---
+    st.markdown("""
+    <div class="footer-text">
+        3 D4 Teknik Komputer A
+        <br>
+        @SmartBin
     </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-# Hero Section
-st.markdown("""
-<div class="hero">
-    <h1>Welcome to SmartBin</h1>
-    <p>Track, Monitor, Stay Clean with Smart Technology...</p>
-</div>
-""", unsafe_allow_html=True)
 
-# Gambar Utama
-st.image("https://cdn.pixabay.com/photo/2017/09/06/19/05/garbage-2729601_1280.jpg", use_column_width=True)
-
-# Section Fitur (dengan tombol/card interaktif)
-st.markdown("""
-<div class="feature-section">
-    <div class="feature-card" onClick='go_to_monitoring()'>
-        <img src="https://www.shutterstock.com/shutterstock/photos/174287021/display_1500/stock-vector-trash-can-with-garbage-and-recycling-symbol-174287021.jpg" width="100%">
-        <h3>Monitoring Real-Time</h3>
-        <p>Pantau kapasitas, suhu, dan kelembapan secara langsung</p>
-    </div>
-    <div class="feature-card" onClick='go_to_notifications()'>
-        <img src="https://www.shutterstock.com/shutterstock/photos/174287021/display_1500/stock-vector-trash-can-with-garbage-and-recycling-symbol-174287021.jpg" width="100%">
-        <h3>Notifikasi Otomatis</h3>
-        <p>Dapatkan peringatan saat tempat sampah hampir penuh</p>
-    </div>
-    <div class="feature-card" onClick='go_to_history()'>
-        <img src="https://www.shutterstock.com/shutterstock/photos/174287021/display_1500/stock-vector-trash-can-with-garbage-and-recycling-symbol-174287021.jpg" width="100%">
-        <h3>Riwayat & Grafik</h3>
-        <p>Analisis tren kebersihan harian dan bulanan</p>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# Section Grafik Data Riwayat (Mockup)
-st.markdown("<div class='chart-section'>", unsafe_allow_html=True)
-st.subheader("Grafik Data Riwayat")
-st.image("https://cdn.theguardian.com/environment/2020/mar/18/recycling-data.jpg", use_column_width=True)
-st.markdown("</div>", unsafe_allow_html=True)
-
-# Section How it works?
-st.markdown("""
-<div class="how-section">
-    <h3>How it works?</h3>
-    <b>1. Hubungkan Perangkat IoT</b><br>
-    Pasang sensor dan sambungkan ke WiFi<br><br>
-    <b>2. Pantau dari Platform</b><br>
-    Login untuk melihat status real-time<br><br>
-    <b>3. Terima Notifikasi</b><br>
-    Dapatkan pemberitahuan saat dibutuhkan<br><br>
-    <p>Bersama kita wujudkan lingkungan yang bersih! 🌱</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Action Buttons
-st.markdown("""
-<div class="action-buttons">
-    <a class="btn" href="#" onClick='show_login_form()'>Login</a>
-    <a class="btn" href="#" onClick='show_register_form()'>Register</a>
-</div>
-""", unsafe_allow_html=True)
-
-# Form Login (ditampilkan jika tombol Login ditekan)
-st.markdown("""
-<div class="login-form" id="login-form">
-    <h3>Login</h3>
-""", unsafe_allow_html=True)
-if st.session_state.show_login:
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Login")
-        if submitted:
-            user = users.find_one({"username": username, "email": email})
-            if user and bcrypt.checkpw(password.encode(), user["password"]):
-                st.success("Login berhasil!")
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.session_state.show_login = False
-                st.experimental_rerun()
-            else:
-                st.error("Username/email/password salah!")
-st.markdown("</div>", unsafe_allow_html=True)
-
-# Form Register (ditampilkan jika tombol Register ditekan)
-st.markdown("""
-<div class="register-form" id="register-form">
-    <h3>Register</h3>
-""", unsafe_allow_html=True)
-if st.session_state.show_register:
-    with st.form("register_form"):
-        username = st.text_input("Username")
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        confirm_password = st.text_input("Konfirmasi Password", type="password")
-        submitted = st.form_submit_button("Register")
-        if submitted:
-            if not all([username, email, password, confirm_password]):
-                st.error("Harap isi semua kolom!")
-            elif password != confirm_password:
-                st.error("Password tidak cocok!")
-            else:
-                if users.find_one({"username": username}):
-                    st.error("Username sudah terdaftar!")
-                else:
-                    hashed_pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-                    users.insert_one({"username": username, "email": email, "password": hashed_pw, "name": username})
-                    st.success("Pendaftaran berhasil!")
-                    st.session_state.logged_in = True
-                    st.session_state.username = username
-                    st.session_state.show_register = False
-                    st.experimental_rerun()
-st.markdown("</div>", unsafe_allow_html=True)
-
-# Demo Data Sensor (Real-Time)
-if st.session_state.logged_in:
-    st.subheader("Data Sensor Terkini")
-    st.write(f"Kapasitas: {st.session_state.sensor_data['kapasitas']}%")
-    st.write(f"Suhu: {st.session_state.sensor_data['suhu']}°C")
-    st.write(f"Kelembapan: {st.session_state.sensor_data['kelembapan']}%")
-
-# Footer
-st.markdown("""
-<div class="footer">
-    D4 Teknik Komputer A @SmartBin - © 2025
-</div>
-""", unsafe_allow_html=True)
-
-# Fungsi JavaScript untuk navigasi (mockup, akan diganti dengan logika nyata)
-st.markdown("""
-<script>
-function go_to_monitoring() {
-    alert("Navigasi ke Monitoring (akan diimplementasikan)");
-}
-function go_to_notifications() {
-    alert("Navigasi ke Notifications (akan diimplementasikan)");
-}
-function go_to_history() {
-    alert("Navigasi ke History (akan diimplementasikan)");
-}
-function show_login_form() {
-    document.getElementById('login-form').classList.add('active');
-    document.getElementById('register-form').classList.remove('active');
-}
-function show_register_form() {
-    document.getElementById('register-form').classList.add('active');
-    document.getElementById('login-form').classList.remove('active');
-}
-</script>
-""", unsafe_allow_html=True)
+if __name__ == "__main__":
+    show_landing_page()
