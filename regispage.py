@@ -2,14 +2,18 @@ import streamlit as st
 import pymongo
 import bcrypt
 
+# --- KONEKSI MONGODB & MOCK DB GLOBAL ---
 # Koneksi MongoDB (GANTI <SmartBin123> DENGAN KATA SANDI ASLI ANDA)
-# Disarankan mengganti <SmartBin123> dengan kata sandi asli. Saya biarkan untuk mencegah error sintaks.
+# Pastikan Anda mengganti placeholder ini dengan kata sandi asli Anda
+MONGO_URI = "mongodb+srv://smartbinuser:<SmartBin123>@cluster0.inq2nbd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+
 try:
-    client = pymongo.MongoClient("mongodb+srv://smartbinuser:<SmartBin123>@cluster0.inq2nbd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+    client = pymongo.MongoClient(MONGO_URI.replace("<SmartBin123>", "YOUR_ACTUAL_PASSWORD_HERE")) # Ganti YOUR_ACTUAL_PASSWORD_HERE
     db = client.smartbin_db
     users = db.users
+    if users.__class__.__name__ == 'Collection':
+        st.success("Terhubung ke MongoDB. Data akan disimpan.")
 except Exception as e:
-    # Error handling jika koneksi gagal (Anda bisa hapus ini jika koneksi MongoDB Anda stabil)
     st.error(f"Gagal terhubung ke MongoDB. Pastikan string koneksi benar. Error: {e}")
     class MockUsersCollection:
         def find_one(self, query): return None
@@ -17,73 +21,38 @@ except Exception as e:
     users = MockUsersCollection()
 
 
-# Fungsi untuk navigasi halaman melalui tautan HTML (diperlukan untuk tautan Login)
+# Fungsi untuk navigasi halaman (menggunakan st.rerun)
 def set_page(page_name):
     """Fungsi setter untuk session_state.page"""
     st.session_state.page = page_name
+    st.rerun() 
 
-def show():
-    # Inisialisasi session state jika belum ada
-    if 'page' not in st.session_state:
-        st.session_state.page = "Register"
-        
-    # --- CSS GLOBAL & FUNGSIONALITAS JAVASCRIPT ---
+# --- VISUALISASI HALAMAN REGISTER ---
+def show_register():
+    
+    # PERBAIKAN: CSS di sini harus menghapus style JS yang tidak perlu dan fokus pada styling.
     st.markdown(
         """
-        <script>
-            function change_page(page_name) {
-                // Mengirim pesan ke Streamlit saat tautan diklik
-                window.parent.postMessage({
-                    type: 'streamlit:setSessionState',
-                    key: 'page',
-                    value: page_name
-                }, '*');
-            }
-        </script>
         <style>
-        /* 1. Warna latar belakang keseluruhan aplikasi: Ungu muda solid */
-        .stApp {
-            background-color: #C3B0E1; /* Ungu Muda Solid */
-            background: #C3B0E1; 
+        .stApp { background-color: #C3B0E1; background: #C3B0E1; }
+        .welcome { color: black; font-size: 36px; text-align: center; margin-top: 50px; }
+        .slogan { color: black; font-size: 24px; text-align: center; }
+        /* Mengatur form agar tetap di tengah */
+        div[data-testid="stForm"] { max-width: 600px; margin: 30px auto; padding: 30px; background-color: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+        div[data-testid="stForm"] .stButton button { 
+            background-color: black; 
+            color: white; 
+            border-radius: 5px; 
+            margin-top: 20px; 
         }
-        
-        /* Styling untuk Welcome dan Slogan */
-        .welcome {
-            color: black;
-            font-size: 36px;
-            text-align: center;
-            margin-top: 50px;
-        }
-        .slogan {
-            color: black;
-            font-size: 24px;
-            text-align: center;
-        }
-
-        /* Styling Form (DIBUAT LEBIH LEBAR) */
-        div[data-testid="stForm"] {
-            max-width: 5000px; /* Diubah dari 400px menjadi 600px */
-            margin: 30px auto;
-            padding: 30px; /* Padding ditingkatkan */
-            background-color: white; 
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Bayangan ditingkatkan */
-        }
-        
-        /* Styling tombol Submit */
-        div[data-testid="stForm"] .stButton button {
-            background-color: black;
-            color: white;
-            border-radius: 5px;
-            margin-top: 20px;
-        }
+        .stMarkdown p { text-align: center; }
+        .center-link { text-align: center; margin-top: 15px; }
         </style>
         """,
         unsafe_allow_html=True
     )
 
     # --- HEADER ---
-    # st.title("Register") Dihapus karena akan tumpang tindih dengan markdown
     st.markdown(
         """
         <div class="welcome">Welcome to SmartBin</div>
@@ -93,7 +62,6 @@ def show():
         """,
         unsafe_allow_html=True
     )
-
 
     # Formulir pendaftaran
     with st.form("register_form"):
@@ -109,32 +77,55 @@ def show():
             elif password != confirm_password:
                 st.error("Password tidak cocok!")
             else:
+                # Cek ketersediaan username
                 if users.find_one({"username": username}):
                     st.error("Username sudah terdaftar!")
                 else:
-                    # Pastikan password di-encode sebelum hashing
+                    # Hashing password dan menyimpan ke DB
+                    # Pastikan password di-encode ke bytes sebelum hashing
                     hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
                     
-                    # Simpan data user
-                    users.insert_one({"username": username, "email": email, "password": hashed_pw.decode('utf-8')})
+                    # Simpan data
+                    users.insert_one({
+                        "username": username, 
+                        "email": email, 
+                        # Simpan password yang sudah di-decode ke string (UTF-8)
+                        "password": hashed_pw.decode('utf-8') 
+                    })
                     
-                    st.success("Pendaftaran berhasil! Mengarahkan ke login...")
-                    set_page("Login")
-                    st.experimental_rerun()
+                    st.success("Pendaftaran berhasil! Mengarahkan ke Halaman Login...")
+                    
+                    # Hapus status login yang mungkin ada
+                    if 'logged_in' in st.session_state: del st.session_state.logged_in
+                    if 'username' in st.session_state: del st.session_state.username
+                    
+                    # NAVIGASI: Arahkan ke Login Page setelah sukses
+                    set_page("Login") 
 
-    # Tautan ke Login
+    # --- Tautan ke Login (Diperbaiki: Menggunakan tombol Streamlit untuk navigasi) ---
     st.markdown(
         """
-        <p style='text-align: center;'>
+        <div class="center-link">
             Sudah punya akun? 
-            <a href='#' onClick='change_page("Login")' style='color: black; font-weight: bold;'>Login</a>
-        </p>
-        """, 
+        </div>
+        """,
         unsafe_allow_html=True
     )
-
-    # Note: Blok CSS latar belakang di akhir kode sebelumnya sudah dihapus dan dipindah ke blok CSS di awal fungsi show()
     
+    # Gunakan 3 kolom untuk memusatkan tombol "Login"
+    col_left, col_center, col_right = st.columns([1, 1, 1])
+    with col_center:
+        # Tombol ini yang akan memicu navigasi, terletak di bawah teks "Sudah punya akun?"
+        if st.button("Login", key="reg_to_login_btn"):
+            set_page("Login")
+
 
 if __name__ == "__main__":
-    show()
+    # Inisialisasi state 'page' jika file dijalankan mandiri
+    if 'page' not in st.session_state:
+        st.session_state.page = "Register" 
+        
+    # Hanya panggil fungsi show_register jika berada di halaman Register (opsional)
+    # Jika aplikasi utamanya sudah ada, ini tidak diperlukan.
+    # Namun, karena ini adalah file terpisah, kita akan langsung memanggilnya.
+    show_register()
