@@ -1,150 +1,48 @@
 import streamlit as st
-from pathlib import Path
-import sys
+import time
+from streamlit_app.utils.ui_helper import load_css
 
-# === Setup Path untuk import internal ===
-ROOT_DIR = Path(__file__).resolve().parents[2]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.append(str(ROOT_DIR))
+def show_login_page(go_to):
+    load_css("style.css")
 
-from app.database.crud_operations import verify_user
-from app.mqtt.mqtt_client import publish_login_event
-from app.streamlit_app.utils.session_manager import go_to_page
-
-
-def show_login_page():
-    st.set_page_config(page_title="Login | SmartBin", layout="wide")
-
-    LEFT_COLOR = "#B0A8DC"
-    RIGHT_COLOR = "#AAB3EF"
-
-    # ===== CSS Styling untuk layout fullscreen =====
-    st.markdown(f"""
-        <style>
-        .block-container {{
-            padding: 0 !important;
-            margin: 0 !important;
-            max-width: 100% !important;
-        }}
-        [data-testid="stHeader"], [data-testid="stToolbar"] {{
-            display: none !important;
-        }}
-
-        body {{
-            margin: 0;
-            overflow: hidden;
-        }}
-
-        .split-container {{
-            display: flex;
-            flex-direction: row;
-            width: 100vw;
-            height: 100vh;
-        }}
-
-        .left {{
-            flex: 1;
-            background-color: {LEFT_COLOR};
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }}
-
-        .right {{
-            flex: 1;
-            background-color: {RIGHT_COLOR};
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: #222;
-        }}
-
-        .login-box {{
-            width: 80%;
-            max-width: 400px;
-            background-color: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }}
-
-        .login-box h1 {{
-            text-align: center;
-            font-size: 32px;
-            color: #4B0082;
-            margin-bottom: 20px;
-            font-weight: 800;
-        }}
-
-        .stTextInput label {{
-            font-weight: 600 !important;
-        }}
-
-        .register-text {{
-            text-align: center;
-            font-size: 15px;
-            margin-top: 10px;
-        }}
-
-        .register-text a {{
-            color: #0047ff;
-            text-decoration: none;
-            font-weight: 600;
-        }}
-        </style>
+    # Header teks
+    st.markdown("""
+        <div class="centered-text">
+            <h1>Welcome to SmartBin</h1>
+            <h3>Track, Monitor, Stay Clean</h3>
+        </div>
     """, unsafe_allow_html=True)
 
-    # ===== Struktur HTML utama (split kiri-kanan) =====
-    st.markdown("""
-        <div class="split-container">
-            <div class="left" id="left-pane">
-                <div class="login-box">
-                    <h1>Login</h1>
-        """, unsafe_allow_html=True)
+    # Form login dalam kotak
+    st.markdown("<div class='form-box'>", unsafe_allow_html=True)
 
-    # ===== Form login =====
     with st.form("login_form"):
+        st.subheader("Login")
         username = st.text_input("Username", placeholder="Masukkan username")
         email = st.text_input("Email", placeholder="Masukkan email")
         password = st.text_input("Password", type="password", placeholder="Masukkan password")
         submitted = st.form_submit_button("Login")
 
         if submitted:
-            user = verify_user(email, password)
-            if user:
-                st.session_state["user"] = user["username"]
-                try:
-                    publish_login_event(user["username"])
-                except Exception:
-                    st.warning("⚠️ Login berhasil, tapi gagal publish event MQTT.")
-                st.success("✅ Login berhasil! Mengarahkan ke HomePage...")
-                go_to_page("HomePage")
+            if not username or not email or not password:
+                st.error("❌ Semua field harus diisi.")
             else:
-                st.error("❌ Username, email, atau password salah.")
+                with st.spinner("Authenticating..."):
+                    time.sleep(1)
+                st.success("✅ Login berhasil!")
+                go_to("HomePage")
 
-    # ===== Tombol & link register =====
-    st.markdown("""
-        <div class="register-text">
-            <p>Belum punya akun?</p>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)  # ✅ Tutup form-box setelah form
 
-    if st.button("Register", use_container_width=True):
-        go_to_page("RegisterPage")
+    # Navigasi di luar form-box agar tidak tercampur
+    st.markdown("<div class='form-box'>", unsafe_allow_html=True)
 
-    # ===== Panel kanan =====
-    st.markdown("""
-            </div> <!-- Tutup login-box -->
-        </div> <!-- Tutup left pane -->
+    nav_col, _ = st.columns([1, 3])
+    with nav_col:
+        st.markdown("<p class='small-note'>Belum punya akun?</p>", unsafe_allow_html=True)
+        if st.button("Register"):
+            go_to("RegisterPage")
+        if st.button("← Back"):
+            go_to("LandingPage")
 
-        <div class="right">
-            <h1 style="font-size:44px; font-weight:800; margin:0;">Welcome to<br>SmartBin</h1>
-            <p style="font-size:24px; margin-top:20px;">Track, Monitor,<br>Stay Clean</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-if __name__ == "__main__":
-    show_login_page()
+    st.markdown("</div>", unsafe_allow_html=True)

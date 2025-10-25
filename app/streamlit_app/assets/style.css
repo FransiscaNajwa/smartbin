@@ -1,0 +1,144 @@
+:root {
+    --bg-gradient: linear-gradient(135deg, #AAB3EF, #F3C4FB);
+    --font-main: 'Segoe UI', sans-serif;
+    --text-color: #222;
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --accent: #F9B97F;
+    --danger: #ff4b4b;
+    --safe: #4caf50;
+    --warn: #ffc107;
+}
+
+/* === GLOBAL === */
+[data-testid="stAppViewContainer"] {
+    background: var(--bg-gradient);
+    font-family: var(--font-main);
+    color: var(--text-color);
+    min-height: 100vh;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+[data-testid="stHeader"] {
+    display: none;
+}
+
+h1, h2, h3, h4 {
+    text-align: center;
+    color: #1a1a1a;
+    margin-bottom: 1rem;
+}
+
+/* === TOP BAR === */
+.title {
+    font-size: 32px;
+    font-weight: bold;
+    color: black;
+    margin-top: -10px;
+    margin-bottom: 0;
+}
+
+/* === BUTTONS === */
+button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-top: 10px;
+    cursor: pointer;
+    border: none;
+    background-color: white;
+    color: black;
+    transition: background-color 0.3s ease;
+    width: 100%;
+}
+
+button:hover {
+    background-color: #e0e0e0;
+}
+
+button.register {
+    border: 2px solid var(--danger);
+    color: var(--danger);
+}
+
+/* === LANDING HEADER === */
+.landing-header {
+    padding-top: 20px;
+    margin-top: -30px;
+    text-align: center;
+}
+
+.landing-header h1 {
+    font-size: 48px;
+    font-weight: 800;
+}
+
+.landing-header h2 {
+    font-size: 40px;
+    font-weight: 700;
+}
+
+.landing-header h3,
+.landing-header h4 {
+    font-size: 20px;
+    font-weight: 400;
+}
+
+/* === INFO CARD === */
+.info-card {
+    background-color: var(--accent);
+    border-radius: 15px;
+    padding: 10px 25px;
+    font-size: 40px;
+    font-weight: 600;
+    color: black;
+    width: 50%;
+    margin: 10px auto;
+    text-align: center;
+}
+
+/* === SECTION TITLE === */
+.section-title {
+    font-size: 26px;
+    font-weight: 700;
+    margin-top: 50px;
+    text-align: center;
+}
+
+/* === FOOTER === */
+.footer {
+    text-align: center;
+    font-size: 14px;
+    color: black;
+    margin-top: 20px;
+    padding-bottom: 30px;
+}
+
+.italic {
+    font-style: italic;
+    text-align: center;
+    margin-top: 40px;
+}
+
+/* === FORM BOX === */
+.form-box {
+    background-color: transparent;
+    padding: 2rem;
+    border-radius: 0;
+    box-shadow: none;
+    max-width: 500px;
+    margin: auto;
+}
+
+/* === SMALL TEXT === */
+.small-note {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 10px;
+    text-align: left;
+}
+/* === HAPUS IKON MATA DI INPUT PASSWORD === */
+[data-testid="stTextInput"] svg {
+    display: none !important;
+}
