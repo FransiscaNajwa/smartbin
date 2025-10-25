@@ -2,32 +2,33 @@ import streamlit as st
 from PIL import Image
 from pathlib import Path
 from streamlit_app.utils.ui_helper import load_css
+import base64
+from io import BytesIO
 
 def show_landing_page(go_to):
     load_css("style.css")
 
-    # Baris atas: SmartBin + tombol Login/Register sejajar
-    top_col1, top_col2, top_col3 = st.columns([3, 1, 1])
-    with top_col1:
-        st.markdown("<h1 class='title'>SmartBin</h1>", unsafe_allow_html=True)
-    with top_col2:
-        if st.button("Login", key="login_btn"):
-            go_to("LoginPage")
-    with top_col3:
-        if st.button("Register", key="register_btn"):
-            go_to("RegisterPage")
-
     # Welcome Section
-    st.markdown("<div class='landing-header'>", unsafe_allow_html=True)
-    st.markdown("<h2>Welcome to SmartBin</h2>", unsafe_allow_html=True)
-    st.markdown("<h4>Track, Monitor, and Stay Clean...</h4>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("""
+        <div class='landing-header'>
+            <h2>Welcome to SmartBin</h2>
+            <h4>Track, Monitor, and Stay Clean...</h4>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # Gambar
+    # Gambar SmartBin responsif di tengah
     img_path = Path(__file__).resolve().parent.parent / "streamlit_app/assets/sampah.png"
     try:
         image = Image.open(img_path)
-        st.image(image, use_container_width=True)
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode()
+
+        st.markdown(f"""
+            <div class='welcome-section'>
+                <img src="data:image/png;base64,{img_base64}" class="responsive-img">
+            </div>
+        """, unsafe_allow_html=True)
     except FileNotFoundError:
         st.warning("⚠️ Gambar 'sampah.png' tidak ditemukan.")
 
@@ -62,14 +63,21 @@ def show_landing_page(go_to):
     Terima peringatan ketika tempat sampah penuh dan suhu dalam tempat sampah meningkat
     """)
 
+    # Tombol Login dan Register di bawah poin 3
+    st.markdown("---")
+    if st.button("Login"):
+        go_to("LoginPage")
+    if st.button("Register"):
+        go_to("RegisterPage")
+
     # Footer
     st.markdown("""
     <div class='italic'>
-    Bersama kita wujudkan kebersihan berkelanjutan  
-    Mulai langkah kecil untuk bumi yang lebih hijau
+        <b>Bersama kita wujudkan kebersihan berkelanjutan</b><br>
+        <b>Mulai langkah kecil untuk bumi yang lebih hijau</b>
     </div>
     <div class='footer'>
         <b>3 D4 Teknik Komputer A</b><br>
-        @SmartBin
+        <b>@SmartBin</b>
     </div>
     """, unsafe_allow_html=True)

@@ -54,4 +54,9 @@ def show_profile_page(go_to=None):
             go_to("HomePage")
 
     # Footer
-    st.markdown("<div class='footer'>3 D4 Teknik Komputer A<br>@SmartBin</div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class='footer'>
+        <b>3 D4 Teknik Komputer A</b><br>
+        <b>@SmartBin</b>
+    </div>
+    """, unsafe_allow_html=True)

@@ -7,8 +7,7 @@ def show_register_page(go_to):
     # Header teks
     st.markdown("""
         <div class="centered-text">
-            <h1>Welcome to SmartBin</h1>
-            <h3>Track, Monitor, Stay Clean</h3>
+            <h1>Welcome to Register Page</h1>
         </div>
     """, unsafe_allow_html=True)
 
@@ -16,7 +15,7 @@ def show_register_page(go_to):
     st.markdown("<div class='form-box'>", unsafe_allow_html=True)
 
     with st.form("register_form"):
-        st.subheader("Register")
+        st.subheader("Register Form")
         username = st.text_input("Username", placeholder="Buat username")
         email = st.text_input("Email", placeholder="Masukkan email baru")
         password = st.text_input("Password", type="password", placeholder="Buat password")  # ✅ tanpa koma
