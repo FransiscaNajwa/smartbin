@@ -42,7 +42,7 @@ def show_login_page(go_to):
         st.markdown("<p class='small-note'>Belum punya akun?</p>", unsafe_allow_html=True)
         if st.button("Register"):
             go_to("RegisterPage")
-        if st.button("← Back"):
+        if st.button("⬅️ Back"):
             go_to("LandingPage")
 
     st.markdown("</div>", unsafe_allow_html=True)

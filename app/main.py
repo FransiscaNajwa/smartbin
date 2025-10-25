@@ -21,6 +21,7 @@ from streamlit_app.LandingPage import show_landing_page
 from streamlit_app.LoginPage import show_login_page
 from streamlit_app.RegisterPage import show_register_page
 from streamlit_app.HomePage import show_home_page
+from streamlit_app.ProfilePage import show_profile_page
 
 # Routing halaman
 page = st.session_state["current_page"]
@@ -33,5 +34,8 @@ elif page == "RegisterPage":
     show_register_page(go_to)
 elif page == "HomePage":
     show_home_page(go_to)
+elif page == "ProfilePage":
+    show_profile_page()
+    
 else:
     st.error(f"❌ Halaman '{page}' tidak ditemukan.")

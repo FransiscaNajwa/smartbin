@@ -37,7 +37,7 @@ def show_register_page(go_to):
     # Tombol navigasi di luar form-box
     st.markdown("<div class='form-box'>", unsafe_allow_html=True)
 
-    if st.button("← Back"):
+    if st.button("⬅️ Back"):
         go_to("LandingPage")
 
     st.markdown("</div>", unsafe_allow_html=True)
