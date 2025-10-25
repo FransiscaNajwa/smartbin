@@ -1,20 +1,55 @@
 import paho.mqtt.client as mqtt
 from app.mqtt.mqtt_config import MQTT_CONFIG
+from app.database.crud_operations import insert_sensor_data
 import json
 import time
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+
+# ===============================
+# 🔧 Utility: Hitung Kapasitas dari Jarak
+# ===============================
+def hitung_kapasitas(jarak_cm, tinggi_bin_cm=40):
+    kapasitas = 100 - (jarak_cm / tinggi_bin_cm * 100)
+    return round(max(0, min(kapasitas, 100)), 2)
+
+# ===============================
+# 📥 Handle Incoming Payload
+# ===============================
+def handle_payload(payload):
+    device_id = payload.get("device_id", "unknown")
+    status = payload.get("status", "Normal")
+
+    if "temperature" in payload:
+        insert_sensor_data(device_id, "temperature", payload["temperature"], "°C", status)
+
+    if "humidity" in payload:
+        insert_sensor_data(device_id, "humidity", payload["humidity"], "%", status)
+
+    if "distance" in payload:
+        kapasitas = hitung_kapasitas(payload["distance"])
+        insert_sensor_data(device_id, "capacity", kapasitas, "%", status)
+
+    logging.info(f"✅ Sensor data saved for {device_id}")
 
 # ===============================
 # 🔌 MQTT CALLBACKS
 # ===============================
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print("✅ MQTT Connected to broker!")
+        logging.info("✅ MQTT Connected to broker!")
         client.subscribe(MQTT_CONFIG["TOPIC_SUBSCRIBE"])
     else:
-        print(f"❌ MQTT Connection failed with code {rc}")
+        logging.error(f"❌ MQTT Connection failed with code {rc}")
 
 def on_message(client, userdata, msg):
-    print(f"📩 Received message on {msg.topic}: {msg.payload.decode()}")
+    try:
+        payload = json.loads(msg.payload.decode())
+        handle_payload(payload)
+    except Exception as e:
+        logging.error(f"❌ Failed to process message: {e}")
 
 # ===============================
 # ⚙️ CREATE MQTT CLIENT
@@ -27,75 +62,51 @@ def create_mqtt_client():
 
     while True:
         try:
-            print("🔗 Connecting to MQTT broker...")
+            logging.info("🔗 Connecting to MQTT broker...")
             client.connect(MQTT_CONFIG["BROKER"], MQTT_CONFIG["PORT"], keepalive=60)
             break
         except Exception as e:
-            print(f"⚠️ Connection failed: {e}, retrying in 5s...")
+            logging.warning(f"⚠️ Connection failed: {e}, retrying in 5s...")
             time.sleep(5)
 
     return client
 
 # ===============================
-# 📡 PUBLISH SENSOR DATA
+# 📤 PUBLISH GENERIC EVENT
+# ===============================
+def publish_event(topic, payload):
+    try:
+        client = create_mqtt_client()
+        client.loop_start()
+        client.publish(topic, json.dumps(payload))
+        logging.info(f"📡 Published event to {topic}: {payload}")
+        time.sleep(1)
+        client.loop_stop()
+        client.disconnect()
+    except Exception as e:
+        logging.error(f"⚠️ Failed to publish event: {e}")
+
+# ===============================
+# 📤 PUBLISH SENSOR DATA
 # ===============================
 def publish_sensor_data(client, sensor_type, value, unit, status):
     payload = {
-        "type": sensor_type,
+        "sensor_type": sensor_type,
         "value": value,
         "unit": unit,
         "status": status
     }
     client.publish(MQTT_CONFIG["TOPIC_PUBLISH"], json.dumps(payload))
-    print(f"📤 Published sensor data: {payload}")
+    logging.info(f"📤 Published sensor data: {payload}")
 
 # ===============================
 # 👤 PUBLISH LOGIN EVENT
 # ===============================
 def publish_login_event(username):
-    """
-    Kirim event login user ke broker MQTT.
-    """
-    try:
-        client = create_mqtt_client()
-        client.loop_start()
-
-        payload = {
-            "event": "login",
-            "username": username,
-            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
-        }
-
-        # Pastikan ada topik untuk login di konfigurasi
-        topic = MQTT_CONFIG.get("TOPIC_LOGIN", "smartbin/login")
-
-        client.publish(topic, json.dumps(payload))
-        print(f"📡 Published login event: {payload}")
-
-        # Hentikan koneksi setelah publish
-        time.sleep(1)
-        client.loop_stop()
-        client.disconnect()
-    except Exception as e:
-        print(f"⚠️ Failed to publish login event: {e}")
-
-# ===============================
-# 🧪 TEST MODE
-# ===============================
-if __name__ == "__main__":
-    client = create_mqtt_client()
-    client.loop_start()
-
-    # Contoh publish dummy data
-    publish_sensor_data(client, "kapasitas", 75, "%", "hampir penuh")
-
-    # Contoh publish event login
-    publish_login_event("caca")
-
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        client.loop_stop()
-        client.disconnect()
-        print("🛑 MQTT stopped.")
+    payload = {
+        "event": "login",
+        "username": username,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    topic = MQTT_CONFIG.get("TOPIC_LOGIN", "smartbin/login")
+    publish_event(topic, payload)
