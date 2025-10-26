@@ -22,15 +22,17 @@ def handle_payload(payload):
     device_id = payload.get("device_id", "unknown")
     status = payload.get("status", "Normal")
 
-    if "temperature" in payload:
-        insert_sensor_data(device_id, "temperature", payload["temperature"], "°C", status)
+    insert_sensor_data(device_id, payload["temperature"], payload["humidity"], payload["distance"], status)
 
-    if "humidity" in payload:
-        insert_sensor_data(device_id, "humidity", payload["humidity"], "%", status)
+    # if "temperature" in payload:
+    #     insert_sensor_data(device_id, "temperature", payload["temperature"], "°C", status)
 
-    if "distance" in payload:
-        kapasitas = hitung_kapasitas(payload["distance"])
-        insert_sensor_data(device_id, "capacity", kapasitas, "%", status)
+    # if "humidity" in payload:
+    #     insert_sensor_data(device_id, "humidity", payload["humidity"], "%", status)
+
+    # if "distance" in payload:
+    #     kapasitas = hitung_kapasitas(payload["distance"])
+    #     insert_sensor_data(device_id, "capacity", kapasitas, "%", status)
 
     logging.info(f"✅ Sensor data saved for {device_id}")
 
@@ -38,6 +40,7 @@ def handle_payload(payload):
 # 🔌 MQTT CALLBACKS
 # ===============================
 def on_connect(client, userdata, flags, rc):
+    logging.info(f"🔄 on_connect called with rc={rc}")
     if rc == 0:
         logging.info("✅ MQTT Connected to broker!")
         client.subscribe(MQTT_CONFIG["TOPIC_SUBSCRIBE"])
@@ -56,14 +59,17 @@ def on_message(client, userdata, msg):
 # ===============================
 def create_mqtt_client():
     client = mqtt.Client()
-    client.username_pw_set(MQTT_CONFIG["USERNAME"], MQTT_CONFIG["PASSWORD"])
     client.on_connect = on_connect
     client.on_message = on_message
 
+    broker = MQTT_CONFIG["BROKER"]
+    port = MQTT_CONFIG["PORT"]
+
     while True:
         try:
-            logging.info("🔗 Connecting to MQTT broker...")
-            client.connect(MQTT_CONFIG["BROKER"], MQTT_CONFIG["PORT"], keepalive=60)
+            logging.info(f"🔗 Connecting to MQTT broker {broker}:{port} ...")
+            client.connect(broker, port, keepalive=60)
+            logging.info("✅ connect() called successfully, waiting for on_connect ...")
             break
         except Exception as e:
             logging.warning(f"⚠️ Connection failed: {e}, retrying in 5s...")

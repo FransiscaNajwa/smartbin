@@ -56,16 +56,21 @@ def update_user_profile(user_id, email=None, username=None, password=None):
 # ♻️ SENSOR DATA COLLECTION
 # ===============================
 
-def insert_sensor_data(device_id, sensor_type, value, unit, status, timestamp=None):
-    data = {
-        "device_id": device_id,
-        "sensor_type": sensor_type,
-        "value": value,
-        "unit": unit,
-        "status": status,
-        "timestamp": timestamp or datetime.utcnow()
-    }
-    return str(db.sensor_data.insert_one(data).inserted_id)
+def insert_sensor_data(device_id, temperature, humidity, value, status, timestamp=None):
+    try:
+        data = {
+            "device_id": device_id,
+            "temperature": temperature,
+            "humidity": humidity,
+            "value": value,
+            "status": status,
+            "timestamp": timestamp or datetime.now()
+        }
+        result = db.sensor_data.insert_one(data)
+        return str(result.inserted_id)
+    except Exception as e:
+        print(f"⚠️ [MongoDB] Gagal menyimpan data sensor: {e}")
+        return None
 
 def insert_dummy_bundle(device_id, capacity, temperature, humidity, status="normal"):
     ts = datetime.utcnow()

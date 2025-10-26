@@ -9,11 +9,11 @@ import pandas as pd
 from collections import defaultdict
 from streamlit_autorefresh import st_autorefresh
 
-# Refresh otomatis setiap 10 detik
-st_autorefresh(interval=10 * 1000, key="landing_refresh")
-
 def show_landing_page(go_to):
     load_css("style.css")
+
+    # Refresh otomatis setiap 10 detik
+    st_autorefresh(interval=10 * 1000, key="landing_refresh")
 
     # Header
     st.markdown("""
@@ -47,17 +47,13 @@ def show_landing_page(go_to):
     kapasitas = suhu = kelembapan = "-"
     timestamp = "-"
 
-    # Ambil data terbaru per sensor
-    for sensor in ["capacity", "temperature", "humidity"]:
-        data = next((d for d in latest if d["sensor_type"] == sensor), None)
-        if data:
-            if sensor == "capacity":
-                kapasitas = f"{data['value']}%"
-                timestamp = data["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
-            elif sensor == "temperature":
-                suhu = f"{data['value']}°C"
-            elif sensor == "humidity":
-                kelembapan = f"{data['value']}%"
+    if latest:
+        latest_data = latest[0]  # Ambil dokumen terbaru (paling pertama)
+
+        kapasitas = f"{latest_data.get('value', 0)}%"
+        suhu = f"{latest_data.get('temperature', 0)}°C"
+        kelembapan = f"{latest_data.get('humidity', 0)}%"
+        timestamp = str(latest_data.get("timestamp", "N/A"))
 
     # Monitoring Preview
     st.markdown("<div class='section-title'>Monitoring Page</div>", unsafe_allow_html=True)
@@ -72,19 +68,16 @@ def show_landing_page(go_to):
     # Riwayat Preview
     st.markdown("<div class='section-title'>Riwayat Page</div>", unsafe_allow_html=True)
     if latest:
-        grouped = defaultdict(dict)
-        for d in latest:
-            waktu = d["timestamp"].strftime("%H:%M")
-            grouped[waktu][d["sensor_type"]] = d["value"]
-
+        # Buat DataFrame langsung dari list dokumen
         df = pd.DataFrame([
             {
-                "🕓 Waktu": waktu,
-                "🗑️ Kapasitas (%)": group.get("capacity"),
-                "🌡️ Suhu (°C)": group.get("temperature"),
-                "💧 Kelembapan (%)": group.get("humidity")
+                "🕓 Waktu": d["timestamp"].strftime("%Y-%m-%d %H:%M:%S") if hasattr(d["timestamp"], "strftime") else str(d["timestamp"]),
+                "🗑️ Kapasitas (%)": f"{d.get('value', 0):.2f}" if isinstance(d.get('value'), (int, float)) else d.get('value'),
+                "🌡️ Suhu (°C)": f"{d.get('temperature', 0):.2f}" if isinstance(d.get('temperature'), (int, float)) else d.get('temperature'),
+                "💧 Kelembapan (%)": f"{d.get('humidity', 0):.2f}" if isinstance(d.get('humidity'), (int, float)) else d.get('humidity'),
+                "📶 Status": d.get("status", "N/A")
             }
-            for waktu, group in grouped.items()
+            for d in latest
         ])
         df = df.sort_values("🕓 Waktu", ascending=False)
         st.table(df)
