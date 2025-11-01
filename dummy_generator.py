@@ -1,55 +1,58 @@
-from pymongo import MongoClient
-from datetime import datetime, timedelta
+from datetime import datetime
+from app.database.sensor_crud import insert_sensor_data
 import random
-from app.mqtt.mqtt_config import secrets
+import time
 
-client = MongoClient(secrets["mongodb"]["uri"])
-db = client[secrets["mongodb"]["database"]]
-collection = db["sensor_data"]
+DEVICE_ID = "bin001"
+DATA_COUNT = 5   # jumlah data dummy
+DELAY = 1        # jeda antar data (detik)
 
-def generate_dummy_data(device_id="bin001", offset_minutes=0):
-    suhu = round(random.uniform(28, 35), 2)
-    kelembapan = round(random.uniform(50, 80), 2)
-    kapasitas = round(random.uniform(10, 95), 2)
-    status = "Normal" if kapasitas < 80 else "Hampir Penuh"
+def status_kapasitas(value):
+    if value >= 90:
+        return "Penuh"
+    elif value >= 80:
+        return "Hampir Penuh"
+    elif value >= 50:
+        return "Cukup"
+    else:
+        return "Rendah"
 
-    timestamp = datetime.utcnow() - timedelta(minutes=offset_minutes)
+def status_suhu(value):
+    return "Tinggi" if value > 35 else "Normal"
 
-    dummy_entries = [
-        {
-            "device_id": device_id,
-            "sensor_type": "temperature",
-            "value": suhu,
-            "unit": "°C",
-            "status": status,
-            "timestamp": timestamp
-        },
-        {
-            "device_id": device_id,
-            "sensor_type": "humidity",
-            "value": kelembapan,
-            "unit": "%",
-            "status": status,
-            "timestamp": timestamp
-        },
-        {
-            "device_id": device_id,
-            "sensor_type": "capacity",
-            "value": kapasitas,
-            "unit": "%",
-            "status": status,
-            "timestamp": timestamp
-        }
-    ]
+def status_kelembapan(value):
+    return "Tinggi" if value > 85 else "Normal"
 
-    collection.insert_many(dummy_entries)
-    print(f"✅ Data dummy untuk {device_id} @ {timestamp.strftime('%H:%M')}")
+def generate_dummy_data():
+    print(f"🚀 Mulai generate {DATA_COUNT} data dummy untuk perangkat {DEVICE_ID}...\n")
+
+    for i in range(DATA_COUNT):
+        timestamp = datetime.utcnow()
+
+        # Data dummy acak
+        capacity = round(random.uniform(60, 100), 2)
+        temperature = round(random.uniform(30, 38), 2)
+        humidity = round(random.uniform(50, 90), 2)
+
+        # Tentukan status otomatis
+        cap_status = status_kapasitas(capacity)
+        temp_status = status_suhu(temperature)
+        hum_status = status_kelembapan(humidity)
+
+        # Simpan ke database
+        insert_sensor_data(DEVICE_ID, "capacity", capacity, "%", cap_status, timestamp)
+        insert_sensor_data(DEVICE_ID, "temperature", temperature, "°C", temp_status, timestamp)
+        insert_sensor_data(DEVICE_ID, "humidity", humidity, "%", hum_status, timestamp)
+
+        print(f"✅ Data {i+1} disimpan:")
+        print(f"   🗑️ Kapasitas   : {capacity}%  → Status: {cap_status}")
+        print(f"   🌡️ Suhu        : {temperature}°C → Status: {temp_status}")
+        print(f"   💧 Kelembapan  : {humidity}% → Status: {hum_status}")
+        print("-" * 40)
+
+        time.sleep(DELAY)
+
+    print(f"\n🎉 Selesai generate {DATA_COUNT} data dummy untuk {DEVICE_ID}.")
 
 if __name__ == "__main__":
-    device_ids = [f"bin{str(i).zfill(3)}" for i in range(1, 11)]  # bin001–bin010
-
-    for batch in range(10):  # 10 waktu berbeda
-        for device_id in device_ids:
-            generate_dummy_data(device_id, offset_minutes=batch * 5)
-
-    print("✅ 300 data dummy berhasil ditambahkan ke MongoDB.")
+    generate_dummy_data()

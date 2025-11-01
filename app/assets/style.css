@@ -1,0 +1,181 @@
+:root {
+    --bg-gradient: linear-gradient(135deg, #AAB3EF, #F3C4FB);
+    --font-main: 'Segoe UI', sans-serif;
+    --text-color: #222;
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --accent: #F9B97F;
+    --danger: #ff4b4b;
+    --safe: #4caf50;
+    --warn: #ffc107;
+}
+
+/* === GLOBAL === */
+[data-testid="stAppViewContainer"] {
+    background: var(--bg-gradient);
+    font-family: var(--font-main);
+    color: var(--text-color);
+    min-height: 100vh;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+[data-testid="stHeader"] {
+    display: none;
+}
+
+h1, h2, h3, h4 {
+    text-align: center;
+    color: #1a1a1a;
+    margin-bottom: 1rem;
+}
+
+/* === TOMBOL ATAS === */
+.top-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+    padding: 15px 25px 0 25px;
+}
+
+.top-buttons .stButton > button {
+    background-color: white;
+    color: #333;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 16px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+    width: auto !important;
+}
+
+.top-buttons .stButton > button:hover {
+    background-color: #f2f2ff;
+    transform: scale(1.05);
+}
+
+.stButton > button:focus {
+    outline: none;
+}
+
+/* === JUDUL HALAMAN === */
+.page-title {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #000;
+    margin: 10px 0 25px 0;
+}
+
+/* === HERO IMAGE === */
+.hero-img {
+    text-align: center;
+    margin: 30px 0 40px 0;
+}
+
+.hero-img img {
+    width: 700px;
+    max-width: 90%;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+/* === MONITORING SECTION === */
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-top: 60px;
+    text-align: left;
+}
+
+/* Label sebelum angka sensor */
+.info-label {
+    font-weight: 600;
+    text-align: left;
+    margin-top: 15px;
+    color: #333;
+    font-size: 1rem;
+}
+
+/* Box data sensor */
+.info-card,
+.status-card {
+    background-color: #fff;
+    color: #333; /* biar terlihat */
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 10px;
+    margin-top: 8px;
+    width: 100%;
+    text-align: center;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.status-card {
+    background-color: #fff;
+    color: #333;
+}
+
+/* Timestamp */
+.timestamp {
+    text-align: center;
+    color: #333;
+    margin-top: 15px;
+    font-size: 0.85rem;
+}
+
+/* === NOTIFIKASI === */
+.notif-box {
+    background-color: #fff8f8;
+    padding: 12px 16px;
+    border-left: 5px solid var(--danger);
+    border-radius: 10px;
+    margin: 8px auto;
+    max-width: 650px;
+    font-size: 15px;
+    color: #222;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* === FOOTER === */
+.footer {
+    text-align: center;
+    font-size: 13px;
+    color: black;
+    margin-top: 120px;
+    padding-bottom: 20px;
+}
+
+/* === RESPONSIF === */
+@media (max-width: 768px) {
+    .top-buttons {
+        justify-content: center;
+        flex-wrap: wrap;
+        padding: 10px;
+    }
+
+    .top-buttons .stButton > button {
+        font-size: 0.85rem;
+        padding: 6px 12px;
+    }
+
+    .hero-img img {
+        max-width: 250px;
+    }
+
+    .page-title {
+        font-size: 1.6rem;
+    }
+
+    .section-title {
+        font-size: 1.2rem;
+    }
+
+    .info-card, .status-card {
+        font-size: 1rem;
+        padding: 8px;
+    }
+}
