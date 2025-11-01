@@ -1,28 +1,46 @@
-🗑️ SmartBin Project
-Selamat datang di proyek SmartBin! Aplikasi ini dirancang untuk memantau dan mengelola tempat sampah secara cerdas menggunakan Streamlit. Fitur-fitur utama meliputi pelacakan kapasitas, pemantauan suhu dan kelembapan, notifikasi kondisi kritis, manajemen profil pengguna, dan visualisasi data historis.
+# 🗑️ SmartBin Project  
 
-📌 Overview
-SmartBin adalah alat yang dikembangkan oleh D4 Teknik Komputer A untuk membantu pengguna memantau status tempat sampah, menerima peringatan otomatis, dan mengelola profil pengguna. Proyek ini menggunakan Streamlit sebagai antarmuka interaktif dan cocok untuk penggunaan pribadi maupun komunitas.
+Selamat datang di proyek **SmartBin!**  
+SmartBin adalah sistem tempat sampah pintar yang dikembangkan oleh **D4 Teknik Komputer A** untuk memantau status kapasitas, suhu, dan kelembapan tempat sampah secara **real-time**.  
+Proyek ini menggunakan **ESP32**, **MQTT**, **MongoDB**, dan **Streamlit** sebagai antarmuka interaktif yang cocok untuk penggunaan pribadi maupun komunitas.  
 
-🚀 Features
-- 🔐 Login & Registrasi: Autentikasi pengguna yang aman dengan fitur edit profil.
-- 📊 Dashboard: Pemantauan real-time kapasitas, suhu, dan kelembapan tempat sampah. Notifikasi berisi peringatan otomatis untuk kondisi seperti penuh, suhu tinggi, atau kelembapan berlebih.
-- 📁 Riwayat: Lihat data historis dan log status tempat sampah.
-- 👤 Edit Profil: Perbarui informasi pengguna dengan mudah.
+---
 
-⚙️ Installation
-✅ Prasyarat
-- Python 3.7 atau lebih tinggi
-- pip (Python package manager)
-- MongoDB (lokal atau cloud)
-- MQTT broker (misalnya Mosquitto)
-📦 Langkah Instalasi
-- Clone repository:
-git clone https://github.com/yourusername/smartbin.git
-cd smartbin
-- Install dependencies:
-pip install -r requirements.txt
-- Konfigurasi database dan MQTT:
-- Edit file app/mqtt/mqtt_config.py dan app/database/mongo_client.py sesuai URI dan kredensial kamu.
-- Jalankan aplikasi Streamlit:
-streamlit run streamlit_app/main.py
+## 🚀 Features  
+- 🔐 **Login, Register, & Profil** — Autentikasi pengguna dan fitur edit profil.  
+- 📊 **Dashboard Real-time** — Menampilkan data kapasitas, suhu, dan kelembapan tempat sampah.  
+- 🔔 **Notifikasi Otomatis** — Peringatan untuk kondisi penuh, suhu tinggi, atau kelembapan berlebih.  
+- 🧾 **Riwayat Sensor** — Menampilkan log data sensor terbaru.  
+
+---
+
+## ⚙️ Installation  
+
+### ✅ Prasyarat  
+- Python 3.8 atau lebih tinggi  
+- pip (Python package manager)  
+- MongoDB (lokal atau cloud)  
+- MQTT broker (misal: HiveMQ)  
+
+### 📦 Langkah Instalasi  
+1. **Clone repository:**
+   ```bash
+   git clone https://github.com/yourusername/smartbin.git
+   cd smartbin
+2. Install dependencies:
+    pip install -r requirements.txt
+3. Konfigurasi koneksi database & MQTT:
+    - Edit file app/config/secrets.toml untuk URI MongoDB
+    - Edit file app/mqtt/mqtt_client.py untuk broker MQTT
+4. Jalankan subscriber MQTT:
+    python app/mqtt/mqtt_subscriber.py
+5. Jalankan aplikasi Streamlit:
+    streamlit run app/main.py
+
+🔌 Hardware
+- ESP32 — sebagai mikrokontroler utama
+- Ultrasonik HC-SR04 — mendeteksi kapasitas sampah
+- DHT11 — membaca suhu dan kelembapan
+
+📍 Dibuat oleh:
+3 D4 Teknik Komputer A — @SmartBin
