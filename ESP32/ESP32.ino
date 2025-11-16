@@ -11,8 +11,8 @@
 DHT dht(DHT_PIN, DHT_TYPE);
 
 // === WiFi ===
-const char* ssid = "SSID";
-const char* password = "PASSWORD";
+const char* ssid = "PES";
+const char* password = "12345678";
 
 // === MQTT ===
 const char* mqtt_server = "broker.hivemq.com";   // Ganti dengan broker kamu jika ada

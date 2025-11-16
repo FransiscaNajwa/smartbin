@@ -1,5 +1,0 @@
-streamlit
-pymongo
-paho-mqtt
-toml
-flask
