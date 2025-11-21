@@ -1,86 +1,95 @@
 from datetime import datetime
 
-
 def detect_notification(entry: dict):
     """
-    Deteksi apakah satu data sensor perlu menghasilkan notifikasi.
-    Tidak menggunakan database, hanya analisis nilai sensor.
+    Deteksi notifikasi dari satu entry sensor.
+    Tidak menggunakan sensor_type karena data tidak memilikinya.
     """
-    # Validasi data
     if not isinstance(entry, dict):
         return None
 
-    value = entry.get("value")
-    sensor_type = entry.get("sensor_type")
     timestamp = entry.get("timestamp", datetime.utcnow())
     device_id = entry.get("device_id", "unknown_device")
 
-    # Pastikan value valid
-    if value is None or sensor_type is None:
-        return None
+    notifications = []
 
-    # 🗑️ Kapasitas
-    if sensor_type == "capacity":
-        if value >= 90:
-            level = "penuh"
-            message = "Tempat sampah penuh. Mohon kosongkan secepatnya."
-        elif value >= 80:
-            level = "hampir penuh"
-            message = "Tempat sampah hampir penuh. Segera lakukan pengosongan."
-        else:
-            return None
+    # ===========================
+    # 🗑️ KAPASITAS (value)
+    # ===========================
+    kapasitas = entry.get("value")
+    if kapasitas is not None:
+        if kapasitas >= 90:
+            notifications.append({
+                "device_id": device_id,
+                "category": "kapasitas",
+                "level": "penuh",
+                "value": round(kapasitas, 2),
+                "unit": "%",
+                "message": "Tempat sampah penuh. Mohon kosongkan secepatnya.",
+                "timestamp": timestamp
+            })
+        elif kapasitas >= 80:
+            notifications.append({
+                "device_id": device_id,
+                "category": "kapasitas",
+                "level": "hampir penuh",
+                "value": round(kapasitas, 2),
+                "unit": "%",
+                "message": "Tempat sampah hampir penuh. Segera lakukan pengosongan.",
+                "timestamp": timestamp
+            })
 
-        return {
-            "device_id": device_id,
-            "category": "kapasitas",
-            "level": level,
-            "value": round(value, 2),
-            "unit": "%",
-            "message": message,
-            "timestamp": timestamp
-        }
-
-    # 🌡️ Suhu
-    elif sensor_type == "temperature" and value > 35:
-        return {
+    # ===========================
+    # 🌡️ SUHU (temperature)
+    # ===========================
+    suhu = entry.get("temperature")
+    if suhu is not None and suhu > 35:
+        notifications.append({
             "device_id": device_id,
             "category": "suhu",
             "level": "tinggi",
-            "value": round(value, 2),
+            "value": round(suhu, 2),
             "unit": "°C",
             "message": "Suhu melebihi ambang batas. Periksa kemungkinan reaksi kimia.",
             "timestamp": timestamp
-        }
+        })
 
-    # 💧 Kelembapan
-    elif sensor_type == "humidity" and value > 85:
-        return {
+    # ===========================
+    # 💧 KELEMBAPAN (humidity)
+    # ===========================
+    kelembapan = entry.get("humidity")
+    if kelembapan is not None and kelembapan > 85:
+        notifications.append({
             "device_id": device_id,
             "category": "kelembapan",
             "level": "tinggi",
-            "value": round(value, 2),
+            "value": round(kelembapan, 2),
             "unit": "%",
             "message": "Kelembapan terlalu tinggi. Periksa kondisi sisa makanan.",
             "timestamp": timestamp
-        }
+        })
 
-    return None
+    # Jika tidak ada notifikasi → None
+    return notifications if notifications else None
 
 
 def generate_notifications_from_data(sensor_data: list):
     """
-    Menghasilkan daftar notifikasi berdasarkan kumpulan data sensor.
-    Hasil berupa list of dict (bisa langsung ditampilkan di Streamlit).
+    Menghasilkan list notifikasi dari kumpulan sensor data.
     """
     if not sensor_data:
         return []
 
-    notifications = []
-    for entry in sensor_data:
-        notif = detect_notification(entry)
-        if notif:
-            notifications.append(notif)
+    all_notifications = []
 
-    # Urutkan dari waktu terbaru ke lama
-    notifications.sort(key=lambda x: x["timestamp"], reverse=True)
-    return notifications
+    for entry in sensor_data:
+        detected = detect_notification(entry)
+        if detected:
+            all_notifications.extend(detected)
+
+    # Urutkan notifikasi dari terbaru ke terlama
+    all_notifications.sort(
+        key=lambda x: x.get("timestamp", datetime.min),
+        reverse=True
+    )
+    return all_notifications

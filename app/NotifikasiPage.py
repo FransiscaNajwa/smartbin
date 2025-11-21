@@ -11,20 +11,23 @@ def show_notifikasi_page(go_to=None):
         </div>
     """, unsafe_allow_html=True)
 
-        # 📊 Ambil data sensor terbaru
-    data = get_latest_data(limit=200)  # bisa disesuaikan
+    # 📊 Ambil data sensor terbaru
+    data = get_latest_data(limit=200)
 
-    # === 🗑️ Kategori: Kapasitas Sampah ===
+    # ==========================================
+    # 🗑️ NOTIFIKASI KAPASITAS TEMPAT SAMPAH
+    # ==========================================
     st.subheader("📦 Kapasitas Tempat Sampah")
 
     kapasitas_notif = [
         d for d in data
-        if d["sensor_type"] == "capacity" and d["value"] >= 80
+        if d.get("value") is not None and d["value"] >= 80
     ]
 
     if kapasitas_notif:
         for i, d in enumerate(kapasitas_notif, 1):
-            level = "penuh" if d["value"] >= 90 else "hampir penuh"
+            val = d["value"]
+            level = "penuh" if val >= 90 else "hampir penuh"
             waktu = d.get("timestamp")
             waktu_str = waktu.strftime("%d %b %Y, %H:%M WIB") if waktu else "-"
 
@@ -34,7 +37,7 @@ def show_notifikasi_page(go_to=None):
                 else "Tempat sampah hampir penuh. Segera lakukan pengosongan."
             )
 
-            st.markdown(f"**{i}. Tempat sampah {level} ({d['value']}%)**")
+            st.markdown(f"**{i}. Tempat sampah {level} ({val}%)**")
             st.markdown(f"- Waktu: {waktu_str}")
             st.markdown(f"- Pesan: {pesan}")
     else:
@@ -42,37 +45,47 @@ def show_notifikasi_page(go_to=None):
 
     st.markdown("---")
 
-    # === 🌡️ Kategori: Suhu & Kelembapan ===
+    # ==========================================
+    # 🌡️ NOTIFIKASI SUHU & KELEMBAPAN
+    # ==========================================
     st.subheader("🌡️ Suhu & Kelembapan")
 
+    # suhu > 35
     suhu_notif = [
         d for d in data
-        if d["sensor_type"] == "temperature" and d["value"] > 35
-    ]
-    kelembapan_notif = [
-        d for d in data
-        if d["sensor_type"] == "humidity" and d["value"] > 85
+        if d.get("temperature") is not None and d["temperature"] > 35
     ]
 
+    # kelembapan > 85
+    kelembapan_notif = [
+        d for d in data
+        if d.get("humidity") is not None and d["humidity"] > 85
+    ]
+
+    # ====== NOTIFIKASI SUHU ======
     if suhu_notif:
         for i, d in enumerate(suhu_notif, 1):
             waktu = d.get("timestamp")
             waktu_str = waktu.strftime("%d %b %Y, %H:%M WIB") if waktu else "-"
-            st.markdown(f"**{i}. Suhu meningkat ({d['value']}°C)**")
+
+            st.markdown(f"**{i}. Suhu meningkat ({d['temperature']}°C)**")
             st.markdown(f"- Waktu: {waktu_str}")
             st.markdown("- Pesan: Suhu melebihi ambang batas. Periksa kemungkinan reaksi kimia.")
     else:
         st.info("ℹ️ Belum ada notifikasi suhu.")
 
+    # ====== NOTIFIKASI KELEMBAPAN ======
     if kelembapan_notif:
         for i, d in enumerate(kelembapan_notif, 1):
             waktu = d.get("timestamp")
             waktu_str = waktu.strftime("%d %b %Y, %H:%M WIB") if waktu else "-"
-            st.markdown(f"**{i}. Kelembapan tinggi ({d['value']}%)**")
+
+            st.markdown(f"**{i}. Kelembapan tinggi ({d['humidity']}%)**")
             st.markdown(f"- Waktu: {waktu_str}")
             st.markdown("- Pesan: Kelembapan terlalu tinggi. Periksa kondisi sisa makanan.")
     else:
         st.info("ℹ️ Belum ada notifikasi kelembapan.")
+
     st.markdown("---")
 
     # Tombol navigasi kembali
@@ -80,7 +93,7 @@ def show_notifikasi_page(go_to=None):
         if go_to:
             go_to("HomePage")
 
-        # 🦶 Footer dengan jarak atas
+    # Footer
     st.markdown("""
         <div class='footer' style='text-align:center; margin-top:200px;'>
             <p><b>3 D4 Teknik Komputer A</b><br>@SmartBin</p>

@@ -4,13 +4,18 @@ from PIL import Image
 from pathlib import Path
 from io import BytesIO
 import base64
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from app.database.sensor_crud import get_latest_data
 from app.database.notification_helper import generate_notifications_from_data
+from streamlit_autorefresh import st_autorefresh
 
 # === Halaman Utama ===
 def show_home_page(go_to):
     load_css("style.css")
+
+    st_autorefresh(interval=10000, key="autorefresh")  # refresh tiap 5 detik
+
+    WIB = timezone(timedelta(hours=7))
 
     # 🧭 Navigasi Atas
     col1, col2, col3, col4 = st.columns(4)
@@ -55,23 +60,44 @@ def show_home_page(go_to):
     kapasitas = suhu = kelembapan = status = "-"
     timestamp = "-"
 
-    for sensor in ["capacity", "temperature", "humidity"]:
-        data = next((d for d in latest if d["sensor_type"] == sensor), None)
-        if data:
-            val = data["value"]
-            if sensor == "capacity":
-                kapasitas = f"{val}%"
-                timestamp = data["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
-                status = (
-                    "Penuh" if val >= 100
-                    else "Hampir Penuh" if val >= 80
-                    else "Cukup" if val >= 50
-                    else "Rendah"
-                )
-            elif sensor == "temperature":
-                suhu = f"{val}°C"
-            elif sensor == "humidity":
-                kelembapan = f"{val}%"
+    # Ambil dokumen terbaru
+    data = latest[0]   # karena latest adalah list of documents
+
+    kapasitas_val = data.get("value")
+    temperature_val = data.get("temperature")
+    humidity_val = data.get("humidity")
+    timestamp_raw = data.get("timestamp")
+
+    if isinstance(timestamp_raw, datetime):
+        # jika datetime tidak punya timezone → paksa jadi UTC
+        if timestamp_raw.tzinfo is None:
+            timestamp_raw = timestamp_raw.replace(tzinfo=timezone.utc)
+
+        # konversi UTC → WIB
+        timestamp_wib = timestamp_raw.astimezone(WIB)
+        timestamp = timestamp_wib.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        timestamp = "-"
+
+    # Kapasitas
+    if kapasitas_val is not None:
+        kapasitas = f"{kapasitas_val}%"
+        status = (
+            "Penuh" if kapasitas_val >= 100
+            else "Hampir Penuh" if kapasitas_val >= 80
+            else "Cukup" if kapasitas_val >= 50
+            else "Rendah"
+        )
+    else:
+        kapasitas = "-"
+        status = "-"
+
+    # Suhu
+    suhu = f"{temperature_val}°C" if temperature_val is not None else "-"
+
+    # Kelembapan
+    kelembapan = f"{humidity_val}%" if humidity_val is not None else "-"
+
 
     # 🌡️ Monitoring Section
     st.markdown("<h3 class='section-title' style='margin-top:60px;'>📊 Monitoring Data</h3>", unsafe_allow_html=True)

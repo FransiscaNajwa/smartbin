@@ -36,7 +36,7 @@ MONGO_SENSOR_COLLECTION = "sensor_data"
 MONGO_USER_COLLECTION = "users"
 
 # 🐞 Mode Debug
-DEBUG_MODE = secrets.get("debug", True)
+DEBUG_MODE = secrets.get("debug", False)
 
 # 🧾 Logging
 LOG_LEVEL = "DEBUG" if DEBUG_MODE else "INFO"
