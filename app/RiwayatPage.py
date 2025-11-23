@@ -41,18 +41,16 @@ def show_riwayat_page(go_to):
             "humidity": "Kelembapan"
         }, inplace=True)
 
-        # Tentukan status berdasarkan kapasitas
+        # Tentukan status berdasarkan kapasitas (samakan dengan notification_helper)
         def get_status(cap):
             if pd.isna(cap):
                 return "-"
-            if cap >= 100:
+            if cap >= 90:
                 return "Penuh"
             elif cap >= 80:
                 return "Hampir Penuh"
-            elif cap >= 50:
-                return "Cukup"
             else:
-                return "Rendah"
+                return "Normal"
 
         df_pivot["Status"] = df_pivot["Kapasitas"].apply(get_status)
 
