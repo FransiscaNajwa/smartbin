@@ -1,5 +1,7 @@
 🗑️ SmartBin Project
+
 Selamat datang di proyek SmartBin!
+
 SmartBin adalah sistem tempat sampah pintar yang dikembangkan oleh D4 Teknik Komputer A untuk memantau status kapasitas, suhu, dan kelembapan tempat sampah secara real-time.
 Proyek ini menggunakan ESP32, MQTT, MongoDB, dan Streamlit sebagai antarmuka interaktif yang cocok untuk penggunaan pribadi maupun komunitas.
 
@@ -23,6 +25,7 @@ Proyek ini menggunakan ESP32, MQTT, MongoDB, dan Streamlit sebagai antarmuka int
 📦 Langkah Instalasi
 - Clone repository:
 git clone https://github.com/FransiscaNajwa/smartbin 
+
 cd smartbin
 - Install dependencies:
 pip install -r requirements.txt
@@ -44,6 +47,7 @@ streamlit run app/main.py
 --
 
 📲 SmartBin Notifier (Telegram Bot)
+
 SmartBin dilengkapi dengan bot Telegram untuk mengirim notifikasi otomatis.
 - Link bot: https://t.me/smartbinnotifbot
 - Cara akses:
@@ -66,4 +70,3 @@ SmartBin dilengkapi dengan bot Telegram untuk mengirim notifikasi otomatis.
 
 📍 Dibuat oleh
 3 D4 Teknik Komputer A — @SmartBin
-
