@@ -37,14 +37,14 @@ python app/mqtt/mqtt_subscriber.py
 - Jalankan aplikasi Streamlit:
 streamlit run app/main.py
 
---
+---
 
 🔌 Hardware
 - ESP32 — sebagai mikrokontroler utama
 - Ultrasonik HC-SR04 — mendeteksi kapasitas sampah
 - DHT11 — membaca suhu dan kelembapan
 
---
+---
 
 📲 SmartBin Notifier (Telegram Bot)
 
@@ -56,7 +56,7 @@ SmartBin dilengkapi dengan bot Telegram untuk mengirim notifikasi otomatis.
 - Setelah itu, sistem akan mencatat chat_id pengguna.
 - Semua notifikasi (penuh, suhu tinggi, kelembapan tinggi) akan dikirim ke chat Telegram pengguna.
 
---
+---
 
 🏗️ Arsitektur Sistem
 - ESP32 → membaca data sensor (kapasitas, suhu, kelembapan).
@@ -66,7 +66,7 @@ SmartBin dilengkapi dengan bot Telegram untuk mengirim notifikasi otomatis.
 - Notification Helper → kirim notifikasi ke Telegram & Email.
 - Streamlit Web App → dashboard real-time, riwayat, dan halaman notifikasi.
 
---
+---
 
 📍 Dibuat oleh
 3 D4 Teknik Komputer A — @SmartBin
