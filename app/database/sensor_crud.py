@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, time, timezone, timedelta
 from bson import ObjectId
 from app.database.mongo_client import db
 from app.config.settings import MONGO_SENSOR_COLLECTION
@@ -6,7 +6,6 @@ from app.database.notification_helper import (
     send_telegram_notification,
     detect_notification,
     format_notification_message,
-    send_email_notification  # jika sudah ditambahkan untuk email
 )
 
 def ensure_db():
@@ -41,12 +40,6 @@ def insert_sensor_data(device_id, temperature, humidity, value, status, timestam
                 # Kirim Telegram
                 send_telegram_notification(message)
 
-                # Kirim Email (opsional, jika sudah ada helper)
-                try:
-                    send_email_notification("SmartBin Alert", message)
-                except Exception as e:
-                    print(f"⚠️ Gagal kirim notifikasi Email: {e}")
-
             except Exception as e:
                 print(f"❌ Gagal kirim notifikasi Telegram: {e}")
 
@@ -78,13 +71,19 @@ def get_latest_data_by_type(sensor_type, limit=10, device_id=None):
     return list(cursor)
 
 def get_sensor_data_by_date(date, device_id=None):
-    """Ambil data sensor berdasarkan tanggal (YYYY-MM-DD)."""
+    """Ambil data sensor berdasarkan tanggal (YYYY-MM-DD) dengan timezone WIB."""
     ensure_db()
-    start = datetime.strptime(date, "%Y-%m-%d")
-    end = start.replace(hour=23, minute=59, second=59)
+    WIB = timezone(timedelta(hours=7))
+
+    # Awal hari (00:00 WIB)
+    start = datetime.combine(datetime.strptime(date, "%Y-%m-%d"), time.min).replace(tzinfo=WIB)
+    # Akhir hari (23:59:59 WIB)
+    end = datetime.combine(datetime.strptime(date, "%Y-%m-%d"), time.max).replace(tzinfo=WIB)
+
     query = {"timestamp": {"$gte": start, "$lte": end}}
     if device_id:
         query["device_id"] = device_id
+
     cursor = db[MONGO_SENSOR_COLLECTION].find(query).sort("timestamp", -1)
     return list(cursor)
 

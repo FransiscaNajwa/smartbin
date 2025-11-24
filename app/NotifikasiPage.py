@@ -1,11 +1,13 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from app.utils.ui_helper import load_css
 from app.database.sensor_crud import get_latest_data
 from app.database.notification_helper import detect_notification
 
 def show_notifikasi_page(go_to=None):
     load_css("style.css")
+
+    WIB = timezone(timedelta(hours=7))
 
     st.markdown("""
         <div class="centered-text" style="margin-top:10px;">
@@ -26,6 +28,15 @@ def show_notifikasi_page(go_to=None):
     # Urutkan notifikasi dari terbaru ke terlama
     notif_list.sort(key=lambda x: x.get("timestamp", datetime.min), reverse=True)
 
+    # Fungsi bantu untuk konversi waktu ke WIB
+    def format_waktu_wib(waktu):
+        if isinstance(waktu, datetime):
+            if waktu.tzinfo is None:
+                waktu = waktu.replace(tzinfo=timezone.utc)
+            waktu = waktu.astimezone(WIB)
+            return waktu.strftime("%d %b %Y, %H:%M WIB")
+        return "-"
+
     # ==========================================
     # 🗑️ NOTIFIKASI KAPASITAS TEMPAT SAMPAH
     # ==========================================
@@ -34,8 +45,7 @@ def show_notifikasi_page(go_to=None):
     kapasitas_notif = [n for n in notif_list if n["category"] == "kapasitas"]
     if kapasitas_notif:
         for i, n in enumerate(kapasitas_notif, 1):
-            waktu = n.get("timestamp")
-            waktu_str = waktu.strftime("%d %b %Y, %H:%M WIB") if isinstance(waktu, datetime) else "-"
+            waktu_str = format_waktu_wib(n.get("timestamp"))
             st.markdown(f"**{i}. Tempat sampah {n['level']} ({n['value']}{n['unit']})**")
             st.markdown(f"- Waktu: {waktu_str}")
             st.markdown(f"- Pesan: {n['message']}")
@@ -55,8 +65,7 @@ def show_notifikasi_page(go_to=None):
     # ====== NOTIFIKASI SUHU ======
     if suhu_notif:
         for i, n in enumerate(suhu_notif, 1):
-            waktu = n.get("timestamp")
-            waktu_str = waktu.strftime("%d %b %Y, %H:%M WIB") if isinstance(waktu, datetime) else "-"
+            waktu_str = format_waktu_wib(n.get("timestamp"))
             st.markdown(f"**{i}. Suhu meningkat ({n['value']}{n['unit']})**")
             st.markdown(f"- Waktu: {waktu_str}")
             st.markdown(f"- Pesan: {n['message']}")
@@ -66,8 +75,7 @@ def show_notifikasi_page(go_to=None):
     # ====== NOTIFIKASI KELEMBAPAN ======
     if kelembapan_notif:
         for i, n in enumerate(kelembapan_notif, 1):
-            waktu = n.get("timestamp")
-            waktu_str = waktu.strftime("%d %b %Y, %H:%M WIB") if isinstance(waktu, datetime) else "-"
+            waktu_str = format_waktu_wib(n.get("timestamp"))
             st.markdown(f"**{i}. Kelembapan tinggi ({n['value']}{n['unit']})**")
             st.markdown(f"- Waktu: {waktu_str}")
             st.markdown(f"- Pesan: {n['message']}")

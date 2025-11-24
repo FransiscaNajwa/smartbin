@@ -1,9 +1,9 @@
 import requests
-import smtplib
 import logging
-from email.mime.text import MIMEText
 from datetime import datetime
-from app.config.settings import secrets, get_email_config
+from app.config.settings import secrets
+from zoneinfo import ZoneInfo
+from datetime import timezone
 
 # ===========================
 # 🔍 DETEKSI NOTIFIKASI
@@ -73,7 +73,6 @@ def detect_notification(entry: dict):
 
     return notifications if notifications else None
 
-
 def generate_notifications_from_data(sensor_data: list):
     """Menghasilkan list notifikasi dari kumpulan sensor data."""
     if not sensor_data:
@@ -119,7 +118,15 @@ def send_telegram_notification(message: str):
 def format_notification_message(notif: dict) -> str:
     """Format notifikasi menjadi pesan multi-baris untuk Telegram."""
     waktu = notif.get("timestamp")
-    waktu_str = waktu.strftime("%d %b %Y, %H:%M WIB") if isinstance(waktu, datetime) else "-"
+    if isinstance(waktu, datetime):
+        # pastikan waktu dianggap UTC kalau belum ada tzinfo
+        if waktu.tzinfo is None:
+            waktu = waktu.replace(tzinfo=timezone.utc)
+        # konversi ke WIB
+        waktu_wib = waktu.astimezone(ZoneInfo("Asia/Jakarta"))
+        waktu_str = waktu_wib.strftime("%d %b %Y, %H:%M WIB")
+    else:
+        waktu_str = "-"
     return (
         f"🚨 SmartBin Alert\n"
         f"📦 Device: {notif['device_id']}\n"
@@ -127,39 +134,3 @@ def format_notification_message(notif: dict) -> str:
         f"Level: {notif['value']}{notif['unit']}\n"
         f"⏰ {waktu_str}"
     )
-
-
-# ===========================
-# 📧 EMAIL NOTIFICATION
-# ===========================
-def format_email_message(notif: dict) -> str:
-    """Format notifikasi menjadi pesan multi-baris untuk Email."""
-    waktu = notif.get("timestamp")
-    waktu_str = waktu.strftime("%d %b %Y, %H:%M WIB") if isinstance(waktu, datetime) else "-"
-    return (
-        f"SmartBin Alert\n\n"
-        f"Device: {notif['device_id']}\n"
-        f"Kategori: {notif['category']}\n"
-        f"Level: {notif['level']}\n"
-        f"Nilai: {notif['value']}{notif['unit']}\n"
-        f"Pesan: {notif['message']}\n"
-        f"Waktu: {waktu_str}\n"
-    )
-
-def send_email_notification(subject: str, body: str):
-    """Kirim notifikasi via Email menggunakan SMTP."""
-    cfg = get_email_config()
-    msg = MIMEText(body, "plain")
-    msg["Subject"] = subject
-    msg["From"] = cfg["sender_email"]
-    msg["To"] = cfg["receiver_email"]
-
-    try:
-        with smtplib.SMTP(cfg["smtp_server"], cfg["smtp_port"]) as server:
-            server.starttls()
-            server.login(cfg["sender_email"], cfg["sender_password"])
-            server.send_message(msg)
-        return {"ok": True}
-    except Exception as e:
-        logging.exception("❌ Gagal kirim email notifikasi")
-        return {"ok": False, "error": str(e)}

@@ -3,6 +3,7 @@ import pandas as pd
 import altair as alt
 from app.utils.ui_helper import load_css
 from app.database.sensor_crud import get_latest_data
+from datetime import timezone, timedelta
 
 
 def show_riwayat_page(go_to):
@@ -23,25 +24,25 @@ def show_riwayat_page(go_to):
     else:
         # Ubah data ke DataFrame
         df = pd.DataFrame(sensor_data)
+        WIB = timezone(timedelta(hours=7))
         df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-        # Pivot data agar setiap waktu jadi satu baris
-        df_pivot = df.pivot_table(
-            index="timestamp",
-            columns="sensor_type",
-            values="value",
-            aggfunc="first"
-        ).reset_index()
+        # kalau timestamp belum ada timezone → anggap UTC
+        df["timestamp"] = df["timestamp"].dt.tz_localize("UTC").dt.tz_convert(WIB)
+        df["timestamp"] = df["timestamp"].dt.tz_localize(None)
 
         # Ubah nama kolom agar rapi
-        df_pivot.rename(columns={
+        df.rename(columns={
             "timestamp": "Waktu",
-            "capacity": "Kapasitas",
+            "value": "Kapasitas",
             "temperature": "Suhu",
             "humidity": "Kelembapan"
         }, inplace=True)
+        # Buang kolom status bawaan dari database agar tidak dobel
+        if "status" in df.columns:
+            df.drop(columns=["status"], inplace=True)
 
-        # Tentukan status berdasarkan kapasitas (samakan dengan notification_helper)
+        # Tentukan status berdasarkan kapasitas
         def get_status(cap):
             if pd.isna(cap):
                 return "-"
@@ -52,11 +53,10 @@ def show_riwayat_page(go_to):
             else:
                 return "Normal"
 
-        df_pivot["Status"] = df_pivot["Kapasitas"].apply(get_status)
+        df["Status"] = df["Kapasitas"].apply(get_status)
 
         # Urutkan berdasarkan waktu
-        df_all = df_pivot.sort_values("Waktu", ascending=True)
-
+        df_all = df.sort_values("Waktu", ascending=True).reset_index(drop=True)
     # === BAGIAN TABEL ===
     st.markdown("### 📋 Tabel Riwayat")
     st.dataframe(df_all, use_container_width=True)
@@ -78,17 +78,22 @@ def show_riwayat_page(go_to):
 
         # Buat chart dengan Altair
         chart = alt.Chart(df_melt).mark_line(point=True).encode(
-            x=alt.X("Waktu:T", title="Waktu"),
-            y=alt.Y("Nilai:Q", title="Nilai Sensor"),
-            color=alt.Color("Sensor:N", title="Jenis Sensor"),
-            tooltip=["Waktu", "Sensor", "Nilai"]
+        x=alt.X(
+            "Waktu:T",
+            title="Waktu",
+            axis=alt.Axis(format="%d %b %H:%M", labelAngle=-30)
+        ),
+        y=alt.Y("Nilai:Q", title="Nilai Sensor"),
+        color=alt.Color("Sensor:N", title="Jenis Sensor"),
+        tooltip=["Waktu", "Sensor", "Nilai"]
         ).properties(
             width="container",
             height=350,
             title="Grafik Kapasitas, Suhu, dan Kelembapan"
         )
-
         st.altair_chart(chart, use_container_width=True)
+        if not df_all.empty:
+            st.caption(f"Rentang waktu (WIB): {df_all['Waktu'].min()} — {df_all['Waktu'].max()}")
 
     # === SPASI & TOMBOL NAVIGASI ===
     st.markdown("<br><hr>", unsafe_allow_html=True)

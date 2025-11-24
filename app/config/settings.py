@@ -85,25 +85,6 @@ def get_telegram_config():
     }
 
 # ===========================
-# 📧 Konfigurasi Email
-# ===========================
-email_cfg = secrets.get("email", {})
-EMAIL_SMTP_SERVER = email_cfg.get("smtp_server", "")
-EMAIL_SMTP_PORT = email_cfg.get("smtp_port", 587)
-EMAIL_SENDER = email_cfg.get("sender_email", "")
-EMAIL_PASSWORD = email_cfg.get("sender_password", "")
-EMAIL_RECEIVER = email_cfg.get("receiver_email", "")
-
-def get_email_config():
-    return {
-        "smtp_server": EMAIL_SMTP_SERVER,
-        "smtp_port": EMAIL_SMTP_PORT,
-        "sender_email": EMAIL_SENDER,
-        "sender_password": EMAIL_PASSWORD,
-        "receiver_email": EMAIL_RECEIVER
-    }
-
-# ===========================
 # 🧠 Gabungan Konfigurasi
 # ===========================
 def get_config():
@@ -112,6 +93,5 @@ def get_config():
         "version": VERSION,
         "mqtt": get_mqtt_config(),
         "mongodb": get_mongo_config(),
-        "telegram": get_telegram_config(),
-        "email": get_email_config()
+        "telegram": get_telegram_config()
     }
