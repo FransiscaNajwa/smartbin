@@ -1,6 +1,10 @@
 import requests
 import logging
+<<<<<<< HEAD
 from datetime import datetime, timedelta
+=======
+from datetime import datetime
+>>>>>>> 7c09256b78e379756e1e5a4f3fc1347e81671aaa
 from app.config.settings import secrets
 from zoneinfo import ZoneInfo
 from datetime import timezone
@@ -118,6 +122,7 @@ def send_telegram_notification(message: str):
 def format_notification_message(notif: dict) -> str:
     """Format notifikasi menjadi pesan multi-baris untuk Telegram."""
     waktu = notif.get("timestamp")
+<<<<<<< HEAD
     if isinstance(waktu, str):
         try:
             # coba parse ISO format string
@@ -127,6 +132,8 @@ def format_notification_message(notif: dict) -> str:
         except Exception:
             waktu = None
 
+=======
+>>>>>>> 7c09256b78e379756e1e5a4f3fc1347e81671aaa
     if isinstance(waktu, datetime):
         # pastikan waktu dianggap UTC kalau belum ada tzinfo
         if waktu.tzinfo is None:
