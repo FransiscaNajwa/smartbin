@@ -83,10 +83,9 @@ def show_home_page(go_to):
     if kapasitas_val is not None:
         kapasitas = f"{kapasitas_val}%"
         status = (
-            "Penuh" if kapasitas_val >= 100
+            "Penuh" if kapasitas_val >= 90
             else "Hampir Penuh" if kapasitas_val >= 80
-            else "Cukup" if kapasitas_val >= 50
-            else "Rendah"
+            else "Normal"
         )
     else:
         kapasitas = "-"
@@ -97,7 +96,6 @@ def show_home_page(go_to):
 
     # Kelembapan
     kelembapan = f"{humidity_val}%" if humidity_val is not None else "-"
-
 
     # 🌡️ Monitoring Section
     st.markdown("<h3 class='section-title' style='margin-top:60px;'>📊 Monitoring Data</h3>", unsafe_allow_html=True)
@@ -117,7 +115,7 @@ def show_home_page(go_to):
 
     st.caption(f"📅 Data terakhir: {timestamp}")
 
-    # 🔔 Notifikasi
+       # 🔔 Notifikasi
     st.markdown("<h3 class='section-title'>🔔 Notifikasi</h3>", unsafe_allow_html=True)
     notifications = generate_notifications_from_data(latest)
 
@@ -125,18 +123,24 @@ def show_home_page(go_to):
         for n in notifications:
             waktu = n.get("timestamp")
             if isinstance(waktu, datetime):
-                waktu = waktu.strftime("%d %b %Y, %H:%M WIB")
+                # kalau timestamp tidak punya tzinfo → anggap UTC
+                if waktu.tzinfo is None:
+                    waktu = waktu.replace(tzinfo=timezone.utc)
+                # konversi ke WIB
+                waktu = waktu.astimezone(WIB)
+                waktu_str = waktu.strftime("%d %b %Y, %H:%M WIB")
             else:
-                waktu = "-"
+                waktu_str = "-"
 
+            # msg SELALU dibuat di sini
             msg = (
                 f"🔔 <b>{n['category'].capitalize()}</b> — {n['message']}<br>"
-                f"📅 {waktu} | 📈 {n['value']}{n['unit']}"
+                f"📅 {waktu_str} | 📈 {n['value']}{n['unit']}"
             )
             st.markdown(f"<div class='notif-box'>{msg}</div>", unsafe_allow_html=True)
     else:
         st.success("✅ Tidak ada notifikasi. Semua kondisi normal.")
-
+        
     # 🦶 Footer
     st.markdown("""
         <div class='footer' style='text-align:center; margin-top:200px;'>

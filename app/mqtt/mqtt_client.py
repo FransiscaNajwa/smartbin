@@ -4,8 +4,10 @@ import math
 import time
 import logging
 from datetime import datetime
+from pytz import timezone
 from app.config.settings import get_mqtt_config
 from app.database.sensor_crud import insert_sensor_data
+from app.database.notification_helper import send_telegram_notification, format_notification_message
 
 # 📦 Load konfigurasi MQTT dari settings.py
 MQTT_CONFIG = get_mqtt_config()
@@ -18,22 +20,26 @@ logging.basicConfig(
 )
 
 # 🔧 Hitung kapasitas berdasarkan jarak sensor ultrasonik
-def hitung_kapasitas(jarak_cm: float, tinggi_bin_cm: float = 40) -> float:
-    """Menghitung kapasitas tempat sampah dalam persen berdasarkan jarak sensor ultrasonik."""
+def hitung_kapasitas(jarak_cm: float, tinggi_bin_cm: float = 24) -> float:
+    """
+    Menghitung kapasitas tempat sampah dalam persen berdasarkan jarak sensor ultrasonik.
+    Rumus: semakin kecil jarak → semakin penuh.
+    """
     if jarak_cm < 0:
         return 0
-    kapasitas = (jarak_cm / tinggi_bin_cm * 100)
+    kapasitas = ((tinggi_bin_cm - jarak_cm) / tinggi_bin_cm) * 100
     return round(max(0, min(kapasitas, 100)), 2)
 
 # 📥 Proses payload dari MQTT
 def handle_payload(payload: dict):
-    """Proses data sensor dari MQTT dan simpan ke database."""
+    """Proses data sensor dari MQTT dan simpan ke database + notifikasi Telegram."""
     try:
         device_id = payload.get("device_id", "unknown")
         status = payload.get("status", "Normal")
 
-        # Data MQTT Anda tidak punya timestamp, jadi gunakan UTC
-        timestamp = datetime.utcnow()
+        # Gunakan waktu lokal WIB
+        wib = timezone("Asia/Jakarta")
+        timestamp = datetime.now(wib)
 
         # Ambil nilai sensor langsung
         temperature = payload.get("temperature")
@@ -44,7 +50,6 @@ def handle_payload(payload: dict):
         value = None
         if distance is not None:
             try:
-                # Kalau distance adalah angka, hitung kapasitasnya
                 value = hitung_kapasitas(distance)
             except Exception:
                 logging.warning("⚠️ Gagal menghitung kapasitas dari distance, set value=None")
@@ -62,6 +67,26 @@ def handle_payload(payload: dict):
 
         logging.info(f"✅ Data sensor disimpan untuk perangkat {device_id}")
 
+        # ---- Kirim notifikasi Telegram ----
+        if value is not None and value >= 80:  # threshold
+            level = "penuh" if value >= 90 else "hampir penuh"
+            message = (
+                "Tempat sampah penuh. Mohon kosongkan secepatnya."
+                if level == "penuh"
+                else "Tempat sampah hampir penuh. Segera lakukan pengosongan."
+            )
+
+            body = format_notification_message({
+                "device_id": device_id,
+                "category": "kapasitas",
+                "level": level,
+                "value": value,
+                "unit": "%",
+                "message": message,
+                "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            })
+            send_telegram_notification(body)
+
     except Exception as e:
         logging.exception(f"❌ Gagal memproses payload: {e}")
 
@@ -78,18 +103,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     try:
         raw = msg.payload.decode("utf-8")
-
-        # Gunakan eval dengan namespace aman (hanya nan, inf, -inf)
-        safe_namespace = {
-            "nan": math.nan,
-            "NaN": math.nan,
-            "inf": math.inf,
-            "Infinity": math.inf,
-            "-inf": -math.inf,
-            "-Infinity": -math.inf,
-        }
-
-        payload = eval(raw, {"__builtins__": None}, safe_namespace)
+        payload = json.loads(raw)
 
         if not isinstance(payload, dict):
             raise ValueError("Payload bukan dictionary valid.")
