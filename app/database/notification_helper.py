@@ -1,13 +1,8 @@
 import requests
 import logging
-<<<<<<< HEAD
-from datetime import datetime, timedelta
-=======
-from datetime import datetime
->>>>>>> 7c09256b78e379756e1e5a4f3fc1347e81671aaa
+from datetime import datetime, timedelta, timezone
 from app.config.settings import secrets
 from zoneinfo import ZoneInfo
-from datetime import timezone
 
 # ===========================
 # 🔍 DETEKSI NOTIFIKASI
@@ -103,26 +98,29 @@ TELEGRAM_TOKEN = secrets.get("telegram", {}).get("token")
 TELEGRAM_CHAT_ID = secrets.get("telegram", {}).get("chat_id")
 
 def send_telegram_notification(message: str):
-    """Kirim pesan ke Telegram. Return dict hasil API."""
+    """Kirim pesan ke semua chat_id yang ada di secrets.toml"""
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         raise ValueError("Telegram token atau chat_id belum dikonfigurasi.")
-    
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
 
-    try:
-        response = requests.post(url, data=payload, timeout=10)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as e:
-        logging.exception("❌ Gagal kirim notifikasi Telegram")
-        return {"ok": False, "error": str(e)}
+    # Pastikan chat_id berupa list
+    chat_ids = TELEGRAM_CHAT_ID if isinstance(TELEGRAM_CHAT_ID, list) else [TELEGRAM_CHAT_ID]
 
+    results = []
+    for cid in chat_ids:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        payload = {"chat_id": cid, "text": message}
+        try:
+            response = requests.post(url, data=payload, timeout=10)
+            response.raise_for_status()
+            results.append(response.json())
+        except requests.RequestException as e:
+            logging.exception(f"❌ Gagal kirim notifikasi ke chat_id {cid}")
+            results.append({"ok": False, "chat_id": cid, "error": str(e)})
+    return results
 
 def format_notification_message(notif: dict) -> str:
     """Format notifikasi menjadi pesan multi-baris untuk Telegram."""
     waktu = notif.get("timestamp")
-<<<<<<< HEAD
     if isinstance(waktu, str):
         try:
             # coba parse ISO format string
@@ -131,9 +129,6 @@ def format_notification_message(notif: dict) -> str:
             waktu = waktu - timedelta(hours=7)
         except Exception:
             waktu = None
-
-=======
->>>>>>> 7c09256b78e379756e1e5a4f3fc1347e81671aaa
     if isinstance(waktu, datetime):
         # pastikan waktu dianggap UTC kalau belum ada tzinfo
         if waktu.tzinfo is None:
