@@ -20,11 +20,7 @@ logging.basicConfig(
 )
 
 # 🔧 Hitung kapasitas berdasarkan jarak sensor ultrasonik
-<<<<<<< HEAD
 def hitung_kapasitas(jarak_cm: float, tinggi_bin_cm: float = 24) -> float:
-=======
-def hitung_kapasitas(jarak_cm: float, tinggi_bin_cm: float = 40) -> float:
->>>>>>> 7c09256b78e379756e1e5a4f3fc1347e81671aaa
     """
     Menghitung kapasitas tempat sampah dalam persen berdasarkan jarak sensor ultrasonik.
     Rumus: semakin kecil jarak → semakin penuh.
