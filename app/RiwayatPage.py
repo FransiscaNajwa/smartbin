@@ -11,9 +11,12 @@ def show_riwayat_page(go_to):
     load_css("style.css")
 
     # Judul halaman
-    st.markdown("<h1 class='section-title'>Halaman Riwayat</h1>", unsafe_allow_html=True)
+    st.markdown(
+    "<h1 class='section-title' style='text-align:center;'>Halaman Riwayat</h1>",
+    unsafe_allow_html=True
+)
 
-    # Ambil data sensor dari MongoDB
+    # Ambil data sensor dari MongoDBa
     sensor_data = get_latest_data(limit=50)
 
     # Siapkan DataFrame kosong untuk tampilan awal
